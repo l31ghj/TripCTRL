@@ -11,13 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Use Node.js
+      # ---------- BACKEND ----------
+      - name: Setup Node for backend
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install backend deps
         working-directory: backend
@@ -30,6 +33,14 @@ jobs:
       - name: Build backend
         working-directory: backend
         run: npm run build
+
+      # ---------- FRONTEND ----------
+      - name: Setup Node for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend deps
         working-directory: frontend
