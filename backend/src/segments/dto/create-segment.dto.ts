@@ -3,13 +3,13 @@ import { SegmentType } from '@prisma/client';
 
 export class CreateSegmentDto {
   @IsEnum(SegmentType)
-  type: SegmentType;
+  type!: SegmentType;
 
   @IsString()
-  title: string;
+  title!: string;
 
   @IsDateString()
-  startTime: string;
+  startTime!: string;
 
   @IsDateString()
   @IsOptional()

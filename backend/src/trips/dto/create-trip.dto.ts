@@ -2,17 +2,17 @@ import { IsDateString, IsOptional, IsString } from 'class-validator';
 
 export class CreateTripDto {
   @IsString()
-  title: string;
+  title!: string;
 
   @IsString()
   @IsOptional()
   mainLocation?: string;
 
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @IsDateString()
-  endDate: string;
+  endDate!: string;
 
   @IsString()
   @IsOptional()
