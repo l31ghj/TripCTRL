@@ -28,8 +28,6 @@ services:
       - backend
     ports:
       - "3000:80"
-    environment:
-      VITE_API_BASE: "http://backend:8000/api"
     restart: unless-stopped
 
 volumes:

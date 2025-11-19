@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # ---------- BACKEND ----------
+      # BACKEND
       - name: Setup Node for backend
         uses: actions/setup-node@v4
         with:
@@ -34,7 +34,7 @@ jobs:
         working-directory: backend
         run: npm run build
 
-      # ---------- FRONTEND ----------
+      # FRONTEND
       - name: Setup Node for frontend
         uses: actions/setup-node@v4
         with:
