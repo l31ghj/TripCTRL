@@ -1,0 +1,55 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  trips     Trip[]
+}
+
+model Trip {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  title        String
+  mainLocation String?
+  startDate    DateTime
+  endDate      DateTime
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  segments     Segment[]
+}
+
+enum SegmentType {
+  flight
+  accommodation
+  transport
+  activity
+  note
+}
+
+model Segment {
+  id               String      @id @default(uuid())
+  tripId           String
+  trip             Trip        @relation(fields: [tripId], references: [id])
+  type             SegmentType
+  title            String
+  startTime        DateTime
+  endTime          DateTime?
+  location         String?
+  provider         String?
+  confirmationCode String?
+  details          Json?
+  sortOrder        Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
