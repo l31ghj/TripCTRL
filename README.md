@@ -1,6 +1,6 @@
 # TripCTRL – Self-Hosted Travel Planner
 
-TripCTRL is a self-hosted travel planning platform.
+TripCTRL is a self-hosted travel planning platform inspired by TripIt.
 
 ## Stack
 
