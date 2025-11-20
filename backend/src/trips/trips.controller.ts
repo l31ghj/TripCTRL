@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -63,6 +64,13 @@ export class TripsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: tripImageStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new BadRequestException('Only image uploads allowed'), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   async uploadImage(

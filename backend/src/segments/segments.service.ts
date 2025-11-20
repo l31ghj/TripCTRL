@@ -13,7 +13,7 @@ export class SegmentsService {
     });
     if (!trip) throw new NotFoundException('Trip not found');
 
-    return this.prisma.segment.create({
+    await this.prisma.segment.create({
       data: {
         tripId,
         type: dto.type,
@@ -31,6 +31,11 @@ export class SegmentsService {
         passengerName: dto.passengerName,
       },
     });
+
+    return this.prisma.trip.findFirst({
+      where: { id: tripId, userId },
+      include: { segments: { orderBy: { startTime: 'asc' } } },
+    });
   }
 
   async updateSegment(userId: string, segmentId: string, dto: UpdateSegmentDto) {
@@ -42,7 +47,7 @@ export class SegmentsService {
       throw new NotFoundException('Segment not found');
     }
 
-    return this.prisma.segment.update({
+    await this.prisma.segment.update({
       where: { id: segmentId },
       data: {
         type: dto.type,
@@ -59,6 +64,11 @@ export class SegmentsService {
         seatNumber: dto.seatNumber,
         passengerName: dto.passengerName,
       },
+    });
+
+    return this.prisma.trip.findFirst({
+      where: { id: segment.tripId, userId },
+      include: { segments: { orderBy: { startTime: 'asc' } } },
     });
   }
 

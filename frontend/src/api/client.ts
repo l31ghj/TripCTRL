@@ -1,5 +1,5 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASE ?? 'http://192.168.68.131:8000/api';
+  import.meta.env.VITE_API_BASE ?? '/api';
 
 export const API_ORIGIN = API_BASE.replace(/\/api$/, '');
 
