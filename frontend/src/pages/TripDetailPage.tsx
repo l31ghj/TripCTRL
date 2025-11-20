@@ -5,7 +5,7 @@ import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { api } from '../api/client';
-import NavBar from '../components/NavBar';
+import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
 

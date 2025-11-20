@@ -24,10 +24,11 @@ export type Segment = {
   passengerName?: string | null;
 };
 
-export async function getTrips() {
+export async function listTrips() {
   return api<Trip[]>('/trips');
 }
 
+export const getTrips = listTrips;
 export async function getTrip(id: string) {
   return api<Trip & { segments: Segment[] }>(`/trips/${id}`);
 }
