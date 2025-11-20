@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 function tripImageStorage() {
   return diskStorage({
     destination: 'uploads/trips',
-    filename: (_req, file, cb) => {
+    filename: (_req: any, file: any, cb: any) => {
       const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
       const extension = extname(file.originalname) || '.jpg';
       cb(null, `${unique}${extension}`);
@@ -68,7 +68,7 @@ export class TripsController {
   async uploadImage(
     @Req() req: any,
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
   ) {
     const publicPath = `/uploads/trips/${file.filename}`;
     return this.trips.updateTripImage(req.user.userId, id, publicPath);
