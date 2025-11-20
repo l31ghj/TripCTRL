@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+const API_BASE =
+  import.meta.env.VITE_API_BASE ?? 'http://192.168.68.131:8000/api';
 
 export async function api<T>(
   path: string,

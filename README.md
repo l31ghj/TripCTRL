@@ -37,3 +37,6 @@ docker compose up --build -d
 ```
 
 Then open `http://<server-ip>:3000`.
+Backend API is at `http://<server-ip>:8000/api` and the frontend is configured
+by default to call `http://192.168.68.131:8000/api` unless you override
+`VITE_API_BASE`.
