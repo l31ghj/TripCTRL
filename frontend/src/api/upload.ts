@@ -1,7 +1,5 @@
 import type { Trip } from './trips';
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api';
+import { API_BASE } from './client';
 
 /**
  * Upload a cover image for a trip.
