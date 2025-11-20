@@ -48,3 +48,25 @@ export async function createTrip(data: {
     body: JSON.stringify(data),
   });
 }
+
+export async function updateTrip(
+  id: string,
+  data: {
+    title?: string;
+    mainLocation?: string;
+    startDate?: string;
+    endDate?: string;
+    notes?: string;
+  },
+) {
+  return api<Trip>(`/trips/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTrip(id: string) {
+  return api<void>(`/trips/${id}`, {
+    method: 'DELETE',
+  });
+}

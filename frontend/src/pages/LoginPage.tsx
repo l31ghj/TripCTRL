@@ -1,13 +1,17 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { login, register } from '../api/auth';
-import { useNavigate } from 'react-router-dom';
 
 export function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem('accessToken')) {
+      window.location.href = '/trips';
+    }
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -18,7 +22,7 @@ export function LoginPage() {
       } else {
         await login(email, password);
       }
-      navigate('/trips');
+      window.location.href = '/trips';
     } catch (err: any) {
       setError(err.message ?? 'Error');
     }
