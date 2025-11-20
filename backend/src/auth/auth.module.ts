@@ -6,7 +6,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './jwt.strategy';
 
-const jwtSecret = process.env.JWT_SECRET;
+const jwtSecret = process.env.JWT_SECRET as string;
 if (!jwtSecret) {
   throw new Error('JWT_SECRET is not set');
 }
