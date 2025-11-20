@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { TripsPage } from './pages/TripsPage';
-import { TripDetailPage } from './pages/TripDetailPage';
+import TripDetailPage from './pages/TripDetailPage';
 import './index.css';
 
 const App = () => {
