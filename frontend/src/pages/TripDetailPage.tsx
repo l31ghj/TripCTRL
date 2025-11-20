@@ -619,6 +619,8 @@ export function TripDetailPage() {
           </div>
         </section>
 
+
+
         {/* Itinerary */}
         <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-slate-800">
@@ -626,8 +628,7 @@ export function TripDetailPage() {
           </h2>
           {sortedDayKeys.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500">
-              No segments yet. Add flights, stays, transport, or activities
-              above.
+              No segments yet. Add flights, stays, transport, or activities above.
             </div>
           ) : (
             <div className="space-y-4">
@@ -636,25 +637,20 @@ export function TripDetailPage() {
                 const dateLabel = new Date(dayKey).toLocaleDateString();
 
                 return (
-                  <div key={dayKey}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <div className="h-px flex-1 bg-slate-200" />
-                      <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                        {dateLabel}
-                      </div>
-                      <div className="h-px flex-1 bg-slate-200" />
+                  <div key={dayKey} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                      {dateLabel}
                     </div>
-
                     <div className="space-y-2">
                       {daySegments.map((s) => {
                         const meta = getSegmentMeta(s.type);
                         return (
                           <div
                             key={s.id}
-                            className="flex items-stretch justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm"
+                            className="flex items-start justify-between gap-3 rounded-lg bg-white p-3 shadow-sm"
                           >
                             <div className="flex flex-1 gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-lg">
                                 {meta.icon}
                               </div>
                               <div>
@@ -668,73 +664,59 @@ export function TripDetailPage() {
                                     {meta.label}
                                   </span>
                                 </div>
-                                <div className="text-xs text-slate-600">
-                                  {new Date(
-                                    s.startTime,
-                                  ).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                  {s.endTime &&
-                                    ` – ${new Date(
-                                      s.endTime,
-                                    ).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}`}
+                                <div className="text-xs text-slate-500">
+                                  {renderTimeRange(s.startTime, s.endTime)}
                                 </div>
-                                {(s.location || s.provider) && (
-                                  <div className="mt-1 text-xs text-slate-500 space-y-0.5">
-                                    {(s.location || s.provider) && (
-                                      <div>
-                                        {s.location}
-                                        {s.location && s.provider && ' · '}
-                                        {s.provider}
-                                      </div>
-                                    )}
-                                    {s.confirmationCode && (
-                                      <div className="text-[11px] text-slate-400">
-                                        Ref: {s.confirmationCode}
-                                      </div>
-                                    )}
-                                    {(s.flightNumber || s.seatNumber || s.passengerName) && (
-                                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500">
-                                        {s.flightNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>✈️</span>
-                                            <span>{s.flightNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.seatNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>💺</span>
-                                            <span>{s.seatNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.passengerName && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>👤</span>
-                                            <span>{s.passengerName}</span>
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <div className="mt-1 text-xs text-slate-500 space-y-0.5">
+                                  {(s.location || s.provider) && (
+                                    <div>
+                                      {s.location}
+                                      {s.location && s.provider && " · "}
+                                      {s.provider}
+                                    </div>
+                                  )}
+                                  {s.confirmationCode && (
+                                    <div className="text-[11px] text-slate-400">
+                                      Ref: {s.confirmationCode}
+                                    </div>
+                                  )}
+                                  {(s.flightNumber || s.seatNumber || s.passengerName) && (
+                                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                                      {s.flightNumber && (
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>✈️</span>
+                                          <span>{s.flightNumber}</span>
+                                        </span>
+                                      )}
+                                      {s.seatNumber && (
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>💺</span>
+                                          <span>{s.seatNumber}</span>
+                                        </span>
+                                      )}
+                                      {s.passengerName && (
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>👤</span>
+                                          <span>{s.passengerName}</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <div className="flex flex-col justify-center gap-1 text-[11px] text-slate-600">
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleEditSegment(s)}
-                                className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-blue-700"
+                                className="rounded-full px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
                               >
                                 Edit
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSegment(s)}
-                                className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-red-700"
+                                className="rounded-full px-2 py-1 text-xs text-red-600 hover:bg-red-50"
                               >
                                 Delete
                               </button>
