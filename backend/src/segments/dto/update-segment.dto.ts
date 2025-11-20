@@ -1,11 +1,4 @@
-import {
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsObject,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsObject, IsOptional, IsString } from 'class-validator';
 import { SegmentType, TransportMode } from '@prisma/client';
 
 export class UpdateSegmentDto {
@@ -48,4 +41,16 @@ export class UpdateSegmentDto {
   @IsInt()
   @IsOptional()
   sortOrder?: number;
+
+  @IsString()
+  @IsOptional()
+  flightNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  seatNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  passengerName?: string;
 }

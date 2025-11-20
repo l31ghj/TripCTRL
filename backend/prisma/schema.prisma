@@ -31,7 +31,6 @@ model Trip {
 }
 
 enum SegmentType {
-  flight
   accommodation
   transport
   activity
@@ -61,6 +60,9 @@ model Segment {
   confirmationCode String?
   details          Json?
   sortOrder        Int?
+  flightNumber     String?
+  seatNumber       String?
+  passengerName    String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }

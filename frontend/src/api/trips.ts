@@ -1,4 +1,4 @@
-import { api, API_BASE, API_ORIGIN } from './client';
+import { api } from './client';
 
 export type Trip = {
   id: string;
@@ -7,7 +7,6 @@ export type Trip = {
   startDate: string;
   endDate: string;
   notes?: string | null;
-  imagePath?: string | null;
 };
 
 export type Segment = {
@@ -20,9 +19,12 @@ export type Segment = {
   provider?: string | null;
   confirmationCode?: string | null;
   transportMode?: string | null;
+  flightNumber?: string | null;
+  seatNumber?: string | null;
+  passengerName?: string | null;
 };
 
-export async function listTrips() {
+export async function getTrips() {
   return api<Trip[]>('/trips');
 }
 
@@ -63,23 +65,4 @@ export async function deleteTrip(id: string) {
   return api<void>(`/trips/${id}`, {
     method: 'DELETE',
   });
-}
-
-export async function uploadTripImage(id: string, file: File) {
-  const token = localStorage.getItem('accessToken');
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`${API_ORIGIN}/api/trips/${id}/image`, {
-    method: 'POST',
-    body: formData,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
-  }
-
-  return res.json() as Promise<Trip>;
 }

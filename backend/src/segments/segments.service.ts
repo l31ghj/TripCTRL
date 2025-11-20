@@ -11,9 +11,7 @@ export class SegmentsService {
     const trip = await this.prisma.trip.findFirst({
       where: { id: tripId, userId },
     });
-    if (!trip) {
-      throw new NotFoundException('Trip not found');
-    }
+    if (!trip) throw new NotFoundException('Trip not found');
 
     return this.prisma.segment.create({
       data: {
@@ -28,6 +26,9 @@ export class SegmentsService {
         confirmationCode: dto.confirmationCode,
         details: dto.details,
         sortOrder: dto.sortOrder,
+        flightNumber: dto.flightNumber,
+        seatNumber: dto.seatNumber,
+        passengerName: dto.passengerName,
       },
     });
   }
@@ -54,6 +55,9 @@ export class SegmentsService {
         confirmationCode: dto.confirmationCode,
         details: dto.details,
         sortOrder: dto.sortOrder,
+        flightNumber: dto.flightNumber,
+        seatNumber: dto.seatNumber,
+        passengerName: dto.passengerName,
       },
     });
   }
