@@ -1,5 +1,7 @@
-const API_BASE =
+export const API_BASE =
   import.meta.env.VITE_API_BASE ?? 'http://192.168.68.131:8000/api';
+
+export const API_ORIGIN = API_BASE.replace(/\/api$/, '');
 
 export async function api<T>(
   path: string,
@@ -23,4 +25,12 @@ export async function api<T>(
   }
 
   return res.json();
+}
+
+export function buildImageUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  return `${API_ORIGIN}${path}`;
 }

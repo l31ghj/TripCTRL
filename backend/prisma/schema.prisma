@@ -24,6 +24,7 @@ model Trip {
   startDate    DateTime
   endDate      DateTime
   notes        String?
+  imagePath    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   segments     Segment[]
@@ -37,11 +38,21 @@ enum SegmentType {
   note
 }
 
+enum TransportMode {
+  flight
+  train
+  bus
+  taxi
+  rideshare
+  drive
+}
+
 model Segment {
-  id               String      @id @default(uuid())
+  id               String        @id @default(uuid())
   tripId           String
-  trip             Trip        @relation(fields: [tripId], references: [id])
+  trip             Trip          @relation(fields: [tripId], references: [id])
   type             SegmentType
+  transportMode    TransportMode?
   title            String
   startTime        DateTime
   endTime          DateTime?
@@ -50,6 +61,6 @@ model Segment {
   confirmationCode String?
   details          Json?
   sortOrder        Int?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }

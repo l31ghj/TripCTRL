@@ -11,12 +11,15 @@ export class SegmentsService {
     const trip = await this.prisma.trip.findFirst({
       where: { id: tripId, userId },
     });
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
 
     return this.prisma.segment.create({
       data: {
         tripId,
         type: dto.type,
+        transportMode: dto.transportMode,
         title: dto.title,
         startTime: new Date(dto.startTime),
         endTime: dto.endTime ? new Date(dto.endTime) : undefined,
@@ -42,6 +45,7 @@ export class SegmentsService {
       where: { id: segmentId },
       data: {
         type: dto.type,
+        transportMode: dto.transportMode,
         title: dto.title,
         startTime: dto.startTime ? new Date(dto.startTime) : undefined,
         endTime: dto.endTime ? new Date(dto.endTime) : undefined,

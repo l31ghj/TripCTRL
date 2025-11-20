@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getTrip, Segment, updateTrip, deleteTrip } from '../api/trips';
+import { getTrip, Segment, updateTrip, deleteTrip, uploadTripImage } from '../api/trips';
 import { createSegment, updateSegment, deleteSegment } from '../api/segments';
 import { NavBar } from '../components/NavBar';
+import { buildImageUrl } from '../api/client';
 
 type TripResponse = {
   id: string;
@@ -11,12 +12,14 @@ type TripResponse = {
   startDate: string;
   endDate: string;
   notes?: string | null;
+  imagePath?: string | null;
   segments: Segment[];
 };
 
 type SegmentFormState = {
   id?: string;
   type: string;
+  transportMode: string;
   title: string;
   startTime: string;
   endTime: string;
@@ -25,14 +28,10 @@ type SegmentFormState = {
   confirmationCode: string;
 };
 
-const emptySegmentForm: SegmentFormState = {
-  type: 'flight',
-  title: '',
-  startTime: '',
-  endTime: '',
-  location: '',
-  provider: '',
-  confirmationCode: '',
+type DayGroup = {
+  dateKey: string;
+  dateLabel: string;
+  segments: Segment[];
 };
 
 const segmentTypeMeta: Record<
@@ -42,36 +41,91 @@ const segmentTypeMeta: Record<
   flight: {
     icon: '✈️',
     label: 'Flight',
-    badgeClass: 'bg-sky-50 text-sky-800 border-sky-100',
+    badgeClass:
+      'bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700/60',
   },
   accommodation: {
     icon: '🏨',
     label: 'Stay',
-    badgeClass: 'bg-violet-50 text-violet-800 border-violet-100',
+    badgeClass:
+      'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700/60',
   },
   transport: {
     icon: '🚗',
     label: 'Transport',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-100',
+    badgeClass:
+      'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700/60',
   },
   activity: {
-    icon: '🎟️',
+    icon: '📍',
     label: 'Activity',
-    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-100',
+    badgeClass:
+      'bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-900/40 dark:text-violet-200 dark:border-violet-700/60',
   },
   note: {
     icon: '📝',
     label: 'Note',
-    badgeClass: 'bg-slate-50 text-slate-700 border-slate-100',
+    badgeClass:
+      'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700/60',
   },
 };
 
-function getSegmentMeta(type: string) {
+const transportModeMeta: Record<
+  string,
+  { icon: string; label: string; badgeClass: string }
+> = {
+  flight: {
+    icon: '✈️',
+    label: 'Flight',
+    badgeClass:
+      'bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700/60',
+  },
+  train: {
+    icon: '🚆',
+    label: 'Train',
+    badgeClass:
+      'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-200 dark:border-indigo-700/60',
+  },
+  bus: {
+    icon: '🚌',
+    label: 'Bus',
+    badgeClass:
+      'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700/60',
+  },
+  taxi: {
+    icon: '🚕',
+    label: 'Taxi',
+    badgeClass:
+      'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700/60',
+  },
+  rideshare: {
+    icon: '🚘',
+    label: 'Rideshare',
+    badgeClass:
+      'bg-pink-50 text-pink-700 border-pink-100 dark:bg-pink-900/40 dark:text-pink-200 dark:border-pink-700/60',
+  },
+  drive: {
+    icon: '🚗',
+    label: 'Drive',
+    badgeClass:
+      'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700/60',
+  },
+};
+
+function getSegmentMeta(segment: Segment) {
+  if (
+    (segment.type === 'transport' || segment.type === 'flight') &&
+    segment.transportMode &&
+    transportModeMeta[segment.transportMode]
+  ) {
+    return transportModeMeta[segment.transportMode];
+  }
   return (
-    segmentTypeMeta[type] ?? {
+    segmentTypeMeta[segment.type] ?? {
       icon: '📌',
-      label: type,
-      badgeClass: 'bg-slate-50 text-slate-700 border-slate-100',
+      label: segment.type,
+      badgeClass:
+        'bg-slate-50 text-slate-700 border-slate-100 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700/60',
     }
   );
 }
@@ -82,17 +136,30 @@ export function TripDetailPage() {
   const [trip, setTrip] = useState<TripResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [segmentError, setSegmentError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [savingTrip, setSavingTrip] = useState(false);
+  const [savingSegment, setSavingSegment] = useState(false);
+  const [showDetailsEditor, setShowDetailsEditor] = useState(false);
 
-  const [editTitle, setEditTitle] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [editStartDate, setEditStartDate] = useState('');
-  const [editEndDate, setEditEndDate] = useState('');
-  const [editNotes, setEditNotes] = useState('');
+  const [tripTitle, setTripTitle] = useState('');
+  const [tripLocation, setTripLocation] = useState('');
+  const [tripStartDate, setTripStartDate] = useState('');
+  const [tripEndDate, setTripEndDate] = useState('');
+  const [tripNotes, setTripNotes] = useState('');
 
-  const [segmentForm, setSegmentForm] =
-    useState<SegmentFormState>(emptySegmentForm);
-  const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
+  const [segmentForm, setSegmentForm] = useState<SegmentFormState>({
+    type: 'flight',
+    transportMode: 'flight',
+    title: '',
+    startTime: '',
+    endTime: '',
+    location: '',
+    provider: '',
+    confirmationCode: '',
+  });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -100,56 +167,92 @@ export function TripDetailPage() {
       try {
         const data = await getTrip(id);
         setTrip(data);
-        setEditTitle(data.title);
-        setEditLocation(data.mainLocation ?? '');
-        setEditStartDate(data.startDate.slice(0, 10));
-        setEditEndDate(data.endDate.slice(0, 10));
-        setEditNotes(data.notes ?? '');
+        setTripTitle(data.title);
+        setTripLocation(data.mainLocation ?? '');
+        setTripStartDate(data.startDate.slice(0, 10));
+        setTripEndDate(data.endDate.slice(0, 10));
+        setTripNotes(data.notes ?? '');
       } catch (err: any) {
         setError(err.message ?? 'Error loading trip');
-      } finally {
-        setLoading(false);
       }
     })();
   }, [id]);
 
-  const segmentsByDay = useMemo(() => {
-    if (!trip) return {};
-    const groups: Record<string, Segment[]> = {};
-    for (const s of trip.segments ?? []) {
-      const d = new Date(s.startTime);
-      const key = d.toISOString().slice(0, 10);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(s);
+  const dayGroups: DayGroup[] = useMemo(() => {
+    if (!trip) return [];
+    const groups: Record<string, DayGroup> = {};
+    for (const seg of trip.segments) {
+      const start = new Date(seg.startTime);
+      const key = start.toISOString().slice(0, 10);
+      if (!groups[key]) {
+        groups[key] = {
+          dateKey: key,
+          dateLabel: start.toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          }),
+          segments: [],
+        };
+      }
+      groups[key].segments.push(seg);
     }
-    Object.values(groups).forEach((list) =>
-      list.sort(
-        (a, b) =>
-          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-      ),
+    return Object.values(groups).sort((a, b) =>
+      a.dateKey.localeCompare(b.dateKey),
     );
-    return groups;
   }, [trip]);
 
-  const sortedDayKeys = useMemo(
-    () => Object.keys(segmentsByDay).sort(),
-    [segmentsByDay],
-  );
+  function resetSegmentForm() {
+    setSegmentForm({
+      type: 'flight',
+      transportMode: 'flight',
+      title: '',
+      startTime: '',
+      endTime: '',
+      location: '',
+      provider: '',
+      confirmationCode: '',
+    });
+    setSegmentError(null);
+  }
 
-  async function handleUpdateTrip() {
+  async function handleSaveTripDetails(e: any) {
+    e.preventDefault();
     if (!trip) return;
+    setSavingTrip(true);
+    setError(null);
     try {
       const updated = await updateTrip(trip.id, {
-        title: editTitle,
-        mainLocation: editLocation || undefined,
-        startDate: editStartDate,
-        endDate: editEndDate,
-        notes: editNotes || undefined,
+        title: tripTitle,
+        mainLocation: tripLocation || undefined,
+        startDate: tripStartDate || undefined,
+        endDate: tripEndDate || undefined,
+        notes: tripNotes || undefined,
       });
-      setTrip({ ...trip, ...updated });
+      setTrip((prev) =>
+        prev ? { ...prev, ...updated } : { ...updated, segments: [] },
+      );
+      setShowDetailsEditor(false);
     } catch (err: any) {
-      setError(err.message ?? 'Failed to update trip');
+      setError(err.message ?? 'Failed to save trip');
+    } finally {
+      setSavingTrip(false);
     }
+  }
+
+  function handleEditSegment(seg: Segment) {
+    setSegmentForm({
+      id: seg.id,
+      type: seg.type,
+      transportMode: seg.transportMode ?? (seg.type === 'flight' ? 'flight' : ''),
+      title: seg.title,
+      startTime: seg.startTime.slice(0, 16),
+      endTime: seg.endTime ? seg.endTime.slice(0, 16) : '',
+      location: seg.location ?? '',
+      provider: seg.provider ?? '',
+      confirmationCode: seg.confirmationCode ?? '',
+    });
+    setSegmentError(null);
   }
 
   async function handleDeleteTrip() {
@@ -163,79 +266,59 @@ export function TripDetailPage() {
     }
   }
 
-  function resetSegmentForm() {
-    setSegmentForm(emptySegmentForm);
-    setEditingSegmentId(null);
-    setSegmentError(null);
-  }
-
-  function handleSegmentFieldChange<K extends keyof SegmentFormState>(
-    key: K,
-    value: SegmentFormState[K],
-  ) {
-    setSegmentForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function toIso(dtLocal: string): string | undefined {
-    if (!dtLocal) return undefined;
-    return new Date(dtLocal).toISOString();
-  }
-
-  async function handleSegmentSubmit(e?: React.FormEvent) {
-    if (e) e.preventDefault();
+  async function handleSegmentSubmit(e: any) {
+    e.preventDefault();
     if (!trip) return;
+    setSavingSegment(true);
     setSegmentError(null);
-
     try {
-      const payload = {
+      const payload: any = {
         type: segmentForm.type,
+        transportMode:
+          segmentForm.type === 'transport' || segmentForm.type === 'flight'
+            ? segmentForm.transportMode || null
+            : null,
         title: segmentForm.title,
-        startTime: toIso(segmentForm.startTime),
-        endTime: toIso(segmentForm.endTime),
+        startTime: segmentForm.startTime,
+        endTime: segmentForm.endTime || undefined,
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
       };
 
-      if (!payload.startTime) {
-        setSegmentError('Start time is required');
-        return;
-      }
-
-      if (editingSegmentId) {
-        const updated = await updateSegment(editingSegmentId, payload);
-        setTrip({
-          ...trip,
-          segments: trip.segments.map((s) =>
-            s.id === editingSegmentId ? updated : s,
-          ),
-        });
+      if (segmentForm.id) {
+        const updated = await updateSegment(segmentForm.id, payload);
+        setTrip((prev) =>
+          prev
+            ? {
+                ...prev,
+                segments: prev.segments.map((s) =>
+                  s.id === updated.id ? (updated as Segment) : s,
+                ),
+              }
+            : prev,
+        );
       } else {
         const created = await createSegment(trip.id, payload);
-        setTrip({
-          ...trip,
-          segments: [...trip.segments, created],
-        });
+        setTrip((prev) =>
+          prev
+            ? {
+                ...prev,
+                segments: [...prev.segments, created as Segment].sort(
+                  (a, b) =>
+                    new Date(a.startTime).getTime() -
+                    new Date(b.startTime).getTime(),
+                ),
+              }
+            : prev,
+        );
       }
-
       resetSegmentForm();
     } catch (err: any) {
       setSegmentError(err.message ?? 'Failed to save segment');
+    } finally {
+      setSavingSegment(false);
     }
-  }
-
-  function handleEditSegment(seg: Segment) {
-    setEditingSegmentId(seg.id);
-    setSegmentForm({
-      id: seg.id,
-      type: seg.type,
-      title: seg.title,
-      startTime: seg.startTime.slice(0, 16),
-      endTime: seg.endTime ? seg.endTime.slice(0, 16) : '',
-      location: seg.location ?? '',
-      provider: seg.provider ?? '',
-      confirmationCode: seg.confirmationCode ?? '',
-    });
   }
 
   async function handleDeleteSegment(seg: Segment) {
@@ -243,195 +326,393 @@ export function TripDetailPage() {
     if (!window.confirm('Delete this segment?')) return;
     try {
       await deleteSegment(seg.id);
-      setTrip({
-        ...trip,
-        segments: trip.segments.filter((s) => s.id !== seg.id),
-      });
+      setTrip((prev) =>
+        prev
+          ? { ...prev, segments: prev.segments.filter((s) => s.id !== seg.id) }
+          : prev,
+      );
     } catch (err: any) {
       setSegmentError(err.message ?? 'Failed to delete segment');
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-100">
-        <NavBar />
-        <div className="px-4 py-6 text-sm text-slate-600">
-          Loading trip…
-        </div>
-      </div>
-    );
+  async function handleImageChange(e: any) {
+    if (!trip) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploadingImage(true);
+    try {
+      const updated = await uploadTripImage(trip.id, file);
+      setTrip((prev) =>
+        prev ? { ...prev, imagePath: updated.imagePath } : prev,
+      );
+    } catch (err: any) {
+      setUploadError(err.message ?? 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   }
 
-  if (error) {
+  if (!id) {
     return (
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
         <NavBar />
-        <div className="px-4 py-6">
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        </div>
+        <main className="mx-auto max-w-5xl px-4 py-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            No trip id provided.
+          </p>
+        </main>
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
         <NavBar />
-        <div className="px-4 py-6 text-sm text-slate-600">Trip not found.</div>
+        <main className="mx-auto max-w-5xl px-4 py-6">
+          {error ? (
+            <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-600/60 dark:bg-red-900/30 dark:text-red-200">
+              {error}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Loading trip…
+            </p>
+          )}
+        </main>
       </div>
     );
   }
 
-  const startLabel = new Date(trip.startDate).toLocaleDateString();
-  const endLabel = new Date(trip.endDate).toLocaleDateString();
+  const start = new Date(trip.startDate);
+  const end = new Date(trip.endDate);
+  const coverUrl = buildImageUrl(trip.imagePath);
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
       <NavBar />
-
-      <main className="mx-auto max-w-5xl px-4 pb-10 pt-6 space-y-6">
-        {/* Trip header card */}
-        <section className="rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 p-5 text-white shadow-sm">
-          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                {trip.title}
-              </h1>
-              <div className="mt-1 text-sm text-blue-50">
-                {trip.mainLocation && (
-                  <>
-                    <span className="font-medium text-white">
-                      {trip.mainLocation}
-                    </span>{' '}
-                    ·{' '}
-                  </>
-                )}
-                {startLabel} – {endLabel}
+      <main className="mx-auto max-w-5xl px-4 pb-10 pt-6">
+        {/* Header / title card */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm dark:border-slate-700 dark:bg-slate-800/90">
+          {coverUrl && (
+            <div className="relative h-40 w-full overflow-hidden">
+              <img
+                src={coverUrl}
+                alt={trip.title}
+                className="h-full w-full object-cover"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/10 to-transparent" />
+            </div>
+          )}
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                  {trip.title}
+                </h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+                  {trip.mainLocation && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-base">📍</span>
+                      <span>{trip.mainLocation}</span>
+                    </span>
+                  )}
+                  <span>•</span>
+                  <span>
+                    {start.toLocaleDateString()} – {end.toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDetailsEditor((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-400 dark:hover:bg-slate-800 dark:hover:text-blue-300"
+                >
+                  ✏️ Edit details
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteTrip}
+                  className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-100 dark:border-red-700/70 dark:bg-red-900/40 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-800/60"
+                >
+                  🗑 Delete trip
+                </button>
               </div>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={handleDeleteTrip}
-                className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-100"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-400 dark:hover:bg-slate-800 dark:hover:text-blue-300"
               >
-                Delete trip
+                {uploadingImage ? 'Uploading…' : coverUrl ? 'Change cover' : 'Add cover image'}
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+              {uploadError && (
+                <span className="text-xs text-red-600 dark:text-red-300">
+                  {uploadError}
+                </span>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Trip details form */}
-        <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">
-            Trip details
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Title
-              </label>
-              <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Main location
-              </label>
-              <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Start date
-              </label>
-              <input
-                type="date"
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
-                value={editStartDate}
-                onChange={(e) => setEditStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                End date
-              </label>
-              <input
-                type="date"
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
-                value={editEndDate}
-                onChange={(e) => setEditEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <label className="mb-1 block text-xs font-medium text-slate-600">
-              Notes
-            </label>
-            <textarea
-              className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
-              rows={3}
-              value={editNotes}
-              onChange={(e) => setEditNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleUpdateTrip}
-              className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
-            >
-              Save changes
-            </button>
-          </div>
-        </section>
-
-        {/* Segment form */}
-        <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-800">
-              {editingSegmentId ? 'Edit segment' : 'Add segment'}
+        {/* Trip details editor (toggled from header) */}
+        {showDetailsEditor && (
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/90">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Trip details
             </h2>
-            {editingSegmentId && (
-              <button
-                type="button"
-                onClick={resetSegmentForm}
-                className="text-xs font-medium text-slate-500 underline"
-              >
-                Cancel edit
-              </button>
-            )}
+            <form
+              onSubmit={handleSaveTripDetails}
+              className="mt-3 grid gap-3 md:grid-cols-2 md:gap-4"
+            >
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Title
+                </label>
+                <input
+                  value={tripTitle}
+                  onChange={(e) => setTripTitle(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Main location
+                </label>
+                <input
+                  value={tripLocation}
+                  onChange={(e) => setTripLocation(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Start date
+                </label>
+                <input
+                  type="date"
+                  value={tripStartDate}
+                  onChange={(e) => setTripStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  End date
+                </label>
+                <input
+                  type="date"
+                  value={tripEndDate}
+                  onChange={(e) => setTripEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Notes
+                </label>
+                <textarea
+                  rows={3}
+                  value={tripNotes}
+                  onChange={(e) => setTripNotes(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                  placeholder="High-level plans, packing notes, booking references, etc."
+                />
+              </div>
+              <div className="md:col-span-2 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDetailsEditor(false)}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTrip}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+                >
+                  {savingTrip ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-600/60 dark:bg-red-900/30 dark:text-red-200">
+            {error}
           </div>
+        )}
+
+        {/* Itinerary – now directly under header */}
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/90">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Day-by-day itinerary
+            </h2>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              {trip.segments.length} segment
+              {trip.segments.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          {dayGroups.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              No segments yet. Use the form below to start building your itinerary.
+            </p>
+          ) : (
+            <ol className="space-y-4">
+              {dayGroups.map((group) => (
+                <li key={group.dateKey} className="flex gap-3">
+                  <div className="mt-1 flex w-20 flex-col items-start text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {group.dateLabel}
+                    </span>
+                  </div>
+                  <div className="relative flex-1">
+                    <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700" />
+                    <div className="space-y-3">
+                      {group.segments.map((seg, idx) => {
+                        const meta = getSegmentMeta(seg);
+                        const startTime = new Date(seg.startTime);
+                        const endTime = seg.endTime ? new Date(seg.endTime) : null;
+
+                        return (
+                          <div
+                            key={seg.id}
+                            className="relative flex items-stretch gap-3"
+                          >
+                            <div className="z-10 mt-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs shadow ring-2 ring-slate-200 dark:bg-slate-900 dark:ring-slate-600">
+                              <span>{meta.icon}</span>
+                            </div>
+                            <div className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="font-semibold text-slate-900 dark:text-slate-50">
+                                    {seg.title}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                    <span
+                                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${meta.badgeClass}`}
+                                    >
+                                      <span>{meta.icon}</span>
+                                      <span>{meta.label}</span>
+                                    </span>
+                                    {seg.location && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <span>📍</span>
+                                        <span>{seg.location}</span>
+                                      </span>
+                                    )}
+                                    {seg.provider && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <span>🏷</span>
+                                        <span>{seg.provider}</span>
+                                      </span>
+                                    )}
+                                    {seg.confirmationCode && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <span>🔐</span>
+                                        <span>{seg.confirmationCode}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                  <div>
+                                    {startTime.toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                    {endTime && (
+                                      <>
+                                        {' – '}
+                                        {endTime.toLocaleTimeString([], {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditSegment(seg)}
+                                      className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-400 dark:hover:bg-slate-800 dark:hover:text-blue-300"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteSegment(seg)}
+                                      className="rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 transition hover:border-red-500 hover:bg-red-100 dark:border-red-700/70 dark:bg-red-900/40 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-800/60"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            {idx !== group.segments.length - 1 && (
+                              <div className="absolute left-[21px] top-5 bottom-[-6px] w-px bg-slate-200 dark:bg-slate-700" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {/* Segment form below itinerary */}
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/90">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Add or edit segment
+          </h2>
           {segmentError && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            <div className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-600/60 dark:bg-red-900/30 dark:text-red-200">
               {segmentError}
             </div>
           )}
           <form
             onSubmit={handleSegmentSubmit}
-            className="grid gap-3 md:grid-cols-2"
+            className="mt-3 grid gap-3 md:grid-cols-2 md:gap-4"
           >
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Type
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Segment type
               </label>
               <select
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
                 value={segmentForm.type}
                 onChange={(e) =>
-                  handleSegmentFieldChange('type', e.target.value)
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    type: e.target.value,
+                    transportMode:
+                      e.target.value === 'flight'
+                        ? 'flight'
+                        : prev.transportMode,
+                  }))
                 }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
               >
                 <option value="flight">Flight</option>
                 <option value="accommodation">Accommodation</option>
@@ -440,200 +721,154 @@ export function TripDetailPage() {
                 <option value="note">Note</option>
               </select>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+
+            {(segmentForm.type === 'transport' || segmentForm.type === 'flight') && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Transport mode
+                </label>
+                <select
+                  value={segmentForm.transportMode}
+                  onChange={(e) =>
+                    setSegmentForm((prev) => ({
+                      ...prev,
+                      transportMode: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                >
+                  <option value="flight">Flight</option>
+                  <option value="train">Train</option>
+                  <option value="bus">Bus</option>
+                  <option value="taxi">Taxi</option>
+                  <option value="rideshare">Rideshare</option>
+                  <option value="drive">Drive</option>
+                </select>
+              </div>
+            )}
+
+            <div className="md:col-span-2">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Title
               </label>
               <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
+                required
                 value={segmentForm.title}
                 onChange={(e) =>
-                  handleSegmentFieldChange('title', e.target.value)
+                  setSegmentForm((prev) => ({ ...prev, title: e.target.value }))
                 }
-                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                placeholder="e.g. QF15 Brisbane → Los Angeles"
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Start time
               </label>
               <input
                 type="datetime-local"
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
+                required
                 value={segmentForm.startTime}
                 onChange={(e) =>
-                  handleSegmentFieldChange('startTime', e.target.value)
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    startTime: e.target.value,
+                  }))
                 }
-                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                End time
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                End time (optional)
               </label>
               <input
                 type="datetime-local"
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
                 value={segmentForm.endTime}
                 onChange={(e) =>
-                  handleSegmentFieldChange('endTime', e.target.value)
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    endTime: e.target.value,
+                  }))
                 }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Location
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Location (optional)
               </label>
               <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
                 value={segmentForm.location}
                 onChange={(e) =>
-                  handleSegmentFieldChange('location', e.target.value)
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    location: e.target.value,
+                  }))
                 }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                placeholder="Airport, hotel name, meeting point…"
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Provider
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Provider (optional)
               </label>
               <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
                 value={segmentForm.provider}
                 onChange={(e) =>
-                  handleSegmentFieldChange('provider', e.target.value)
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    provider: e.target.value,
+                  }))
                 }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                placeholder="Airline, hotel chain, etc."
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Confirmation code
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Confirmation / booking code (optional)
               </label>
               <input
-                className="h-9 w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring"
                 value={segmentForm.confirmationCode}
                 onChange={(e) =>
-                  handleSegmentFieldChange(
-                    'confirmationCode',
-                    e.target.value,
-                  )
+                  setSegmentForm((prev) => ({
+                    ...prev,
+                    confirmationCode: e.target.value,
+                  }))
                 }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+                placeholder="ABC123"
               />
             </div>
+
+            <div className="md:col-span-2 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={resetSegmentForm}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Clear form
+              </button>
+              <button
+                type="submit"
+                disabled={savingSegment}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+              >
+                {savingSegment
+                  ? 'Saving…'
+                  : segmentForm.id
+                  ? 'Update segment'
+                  : 'Add segment'}
+              </button>
+            </div>
           </form>
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => handleSegmentSubmit()}
-              className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
-            >
-              {editingSegmentId ? 'Save segment' : 'Add segment'}
-            </button>
-          </div>
-        </section>
-
-        {/* Itinerary */}
-        <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">
-            Itinerary
-          </h2>
-          {sortedDayKeys.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500">
-              No segments yet. Add flights, stays, transport, or activities
-              above.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {sortedDayKeys.map((dayKey) => {
-                const daySegments = segmentsByDay[dayKey];
-                const dateLabel = new Date(dayKey).toLocaleDateString();
-
-                return (
-                  <div key={dayKey}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <div className="h-px flex-1 bg-slate-200" />
-                      <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                        {dateLabel}
-                      </div>
-                      <div className="h-px flex-1 bg-slate-200" />
-                    </div>
-
-                    <div className="space-y-2">
-                      {daySegments.map((s) => {
-                        const meta = getSegmentMeta(s.type);
-                        return (
-                          <div
-                            key={s.id}
-                            className="flex items-stretch justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm"
-                          >
-                            <div className="flex flex-1 gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg">
-                                {meta.icon}
-                              </div>
-                              <div>
-                                <div className="mb-1 flex items-center gap-2">
-                                  <span className="text-sm font-semibold text-slate-900">
-                                    {s.title}
-                                  </span>
-                                  <span
-                                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.badgeClass}`}
-                                  >
-                                    {meta.label}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-slate-600">
-                                  {new Date(
-                                    s.startTime,
-                                  ).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                  {s.endTime &&
-                                    ` – ${new Date(
-                                      s.endTime,
-                                    ).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}`}
-                                </div>
-                                {(s.location || s.provider) && (
-                                  <div className="mt-1 text-xs text-slate-500">
-                                    {s.location}
-                                    {s.location && s.provider && ' · '}
-                                    {s.provider}
-                                  </div>
-                                )}
-                                {s.confirmationCode && (
-                                  <div className="mt-1 text-[11px] text-slate-400">
-                                    Ref: {s.confirmationCode}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-col justify-center gap-1 text-[11px] text-slate-600">
-                              <button
-                                type="button"
-                                onClick={() => handleEditSegment(s)}
-                                className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-blue-700"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSegment(s)}
-                                className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-red-700"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </section>
       </main>
     </div>

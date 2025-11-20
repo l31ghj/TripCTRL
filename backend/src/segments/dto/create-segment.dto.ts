@@ -1,9 +1,20 @@
-import { IsDateString, IsEnum, IsInt, IsObject, IsOptional, IsString } from 'class-validator';
-import { SegmentType } from '@prisma/client';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { SegmentType, TransportMode } from '@prisma/client';
 
 export class CreateSegmentDto {
   @IsEnum(SegmentType)
   type!: SegmentType;
+
+  @IsEnum(TransportMode)
+  @IsOptional()
+  transportMode?: TransportMode;
 
   @IsString()
   title!: string;

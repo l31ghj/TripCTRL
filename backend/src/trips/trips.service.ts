@@ -19,7 +19,9 @@ export class TripsService {
       where: { id: tripId, userId },
       include: { segments: { orderBy: { startTime: 'asc' } } },
     });
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
     return trip;
   }
 
@@ -46,6 +48,16 @@ export class TripsService {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         notes: dto.notes,
+      },
+    });
+  }
+
+  async updateTripImage(userId: string, tripId: string, imagePath: string) {
+    await this.getTrip(userId, tripId);
+    return this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        imagePath,
       },
     });
   }
