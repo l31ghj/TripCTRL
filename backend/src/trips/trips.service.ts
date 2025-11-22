@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import * as fs from 'fs';
+import { join } from 'path';
+
 
 @Injectable()
 export class TripsService {
@@ -63,7 +66,21 @@ export class TripsService {
   }
 
   async deleteTrip(userId: string, tripId: string) {
-    await this.getTrip(userId, tripId);
+    const trip = await this.getTrip(userId, tripId);
+
+    // Clean up any uploaded cover image from disk. We ignore errors if the file is missing.
+    if (trip.imagePath) {
+      const relativePath = trip.imagePath.startsWith('/')
+        ? trip.imagePath.slice(1)
+        : trip.imagePath;
+      const filePath = join(process.cwd(), relativePath);
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (err: any) {
+        // Ignore file-not-found or other filesystem errors to avoid blocking trip deletion
+      }
+    }
+
     await this.prisma.segment.deleteMany({ where: { tripId } });
     return this.prisma.trip.delete({ where: { id: tripId } });
   }
