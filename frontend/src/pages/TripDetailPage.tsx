@@ -426,9 +426,9 @@ async function handleImageChange(e: any) {
         {/* Trip header */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
           <div className="relative h-48 w-full overflow-hidden">
-            {trip.imagePath ? (
+            {buildImageUrl(trip.imagePath) ? (
               <img
-                src={trip.imagePath}
+                src={buildImageUrl(trip.imagePath) as string}
                 alt={trip.title}
                 className="h-full w-full object-cover"
               />
