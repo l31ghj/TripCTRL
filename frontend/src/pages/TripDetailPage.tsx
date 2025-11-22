@@ -262,6 +262,7 @@ export default function TripDetailPage() {
     setSegmentForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  
   async function handleSegmentSubmit(e: any) {
     e.preventDefault();
     if (!id) return;
@@ -286,7 +287,27 @@ export default function TripDetailPage() {
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
-        flightNumber: segmentForm  function handleEditSegment(seg: Segment) {
+        flightNumber: segmentForm.flightNumber || undefined,
+        seatNumber: segmentForm.seatNumber || undefined,
+        passengerName: segmentForm.passengerName || undefined,
+      };
+
+      let updatedTrip: TripDetail;
+      if (editingSegmentId) {
+        updatedTrip = await updateSegment(editingSegmentId, payload);
+      } else {
+        updatedTrip = await createSegment(id, payload);
+      }
+
+      setTrip(updatedTrip);
+      resetSegmentForm();
+    } catch (err: any) {
+      console.error(err);
+      setSegmentError('Failed to save segment. Please try again.');
+    }
+  }
+
+  function handleEditSegment(seg: Segment) {
     setEditingSegmentId(seg.id);
     setSegmentForm({
       id: seg.id,
@@ -297,7 +318,7 @@ export default function TripDetailPage() {
           : seg.type === 'flight'
           ? 'flight'
           : '',
-      title: seg.title,
+      title: seg.title ?? '',
       startTime: toLocalInputValue(seg.startTime),
       endTime: seg.endTime ? toLocalInputValue(seg.endTime) : '',
       location: seg.location ?? '',
@@ -313,8 +334,9 @@ export default function TripDetailPage() {
     if (!id) return;
     if (!confirm('Delete this segment?')) return;
     try {
-      const updated = await deleteSegment(id, seg.id);
-      setTrip(updated);
+      await deleteSegment(seg.id);
+      const updatedTrip = await getTrip(id);
+      setTrip(updatedTrip);
       if (editingSegmentId === seg.id) resetSegmentForm();
     } catch (err: any) {
       console.error(err);
@@ -322,7 +344,7 @@ export default function TripDetailPage() {
     }
   }
 
-  async function handleImageChange(e: any) {
+async function handleImageChange(e: any) {
     if (!id) return;
     const file = e.target.files?.[0];
     if (!file) return;
