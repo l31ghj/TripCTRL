@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Trip, listTrips, createTrip } from '../api/trips';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { NavBar } from '../components/NavBar';
 import { buildImageUrl } from '../api/client';
 
@@ -213,10 +213,9 @@ export function TripsPage() {
                 const coverUrl = buildImageUrl((trip as any).imagePath ?? null);
 
                 return (
-                  <button
+                  <Link
                     key={trip.id}
-                    type="button"
-                    onClick={() => navigate(`/trip/${trip.id}`)}
+                    to={`/trip/${trip.id}`}
                     className="flex w-full items-stretch gap-3 rounded-2xl border border-slate-200 bg-white/90 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/90"
                   >
                     {coverUrl && (
@@ -225,6 +224,10 @@ export function TripsPage() {
                           src={coverUrl}
                           alt={trip.title}
                           className="h-full w-full object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                          }}
                         />
                       </div>
                     )}
@@ -252,7 +255,7 @@ export function TripsPage() {
                         <span>{duration} days</span>
                       </div>
                     </div>
-                  </button>
+                  </Link>
                 );
               })}
 
@@ -273,10 +276,9 @@ export function TripsPage() {
                         const coverUrl = buildImageUrl((trip as any).imagePath ?? null);
 
                         return (
-                          <button
+                          <Link
                             key={trip.id}
-                            type="button"
-                            onClick={() => navigate(`/trip/${trip.id}`)}
+                            to={`/trip/${trip.id}`}
                             className="flex w-full items-stretch gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80"
                           >
                             {coverUrl && (
@@ -285,6 +287,10 @@ export function TripsPage() {
                                   src={coverUrl}
                                   alt={trip.title}
                                   className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    target.style.display = 'none';
+                                  }}
                                 />
                               </div>
                             )}
@@ -310,7 +316,7 @@ export function TripsPage() {
                                 <span>{duration} days</span>
                               </div>
                             </div>
-                          </button>
+                          </Link>
                         );
                       })}
                     </div>
