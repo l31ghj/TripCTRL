@@ -2,9 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
-import * as fs from 'fs';
-import { join } from 'path';
-
 
 @Injectable()
 export class TripsService {
@@ -20,7 +17,10 @@ export class TripsService {
   async getTrip(userId: string, tripId: string) {
     const trip = await this.prisma.trip.findFirst({
       where: { id: tripId, userId },
-      include: { segments: { orderBy: { startTime: 'asc' } } },
+      include: {
+        segments: { orderBy: { startTime: 'asc' }, include: { attachments: true } },
+        attachments: true,
+      },
     });
     if (!trip) {
       throw new NotFoundException('Trip not found');
@@ -65,22 +65,31 @@ export class TripsService {
     });
   }
 
-  async deleteTrip(userId: string, tripId: string) {
-    const trip = await this.getTrip(userId, tripId);
 
-    // Clean up any uploaded cover image from disk. We ignore errors if the file is missing.
-    if (trip.imagePath) {
-      const relativePath = trip.imagePath.startsWith('/')
-        ? trip.imagePath.slice(1)
-        : trip.imagePath;
-      const filePath = join(process.cwd(), relativePath);
-      try {
-        await fs.promises.unlink(filePath);
-      } catch (err: any) {
-        // Ignore file-not-found or other filesystem errors to avoid blocking trip deletion
-      }
+  async addTripAttachment(
+    userId: string,
+    tripId: string,
+    data: { path: string; originalName: string; mimeType?: string; size?: number },
+  ) {
+    const trip = await this.prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
     }
 
+    return this.prisma.attachment.create({
+      data: {
+        tripId,
+        path: data.path,
+        originalName: data.originalName,
+        mimeType: data.mimeType,
+        size: data.size,
+      },
+    });
+  }
+  async deleteTrip(userId: string, tripId: string) {
+    await this.getTrip(userId, tripId);
     await this.prisma.segment.deleteMany({ where: { tripId } });
     return this.prisma.trip.delete({ where: { id: tripId } });
   }

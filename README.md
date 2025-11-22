@@ -2,14 +2,13 @@
 
 TripCTRL is a self-hosted travel planning platform inspired by TripIt.
 
-> **Current backend/frontend snapshot:** `0.1.0 – Core Trip Editing`
+> **Current backend/frontend snapshot:** `0.0.1 – Consolidation & Stability`
 >
 > This release focuses on:
-> - Stable Prisma schema and migrations
+> - Having a stable Prisma schema
 > - Avoiding `prisma db push --accept-data-loss` in normal workflows
 > - Clean local dev setup for backend + frontend
 > - Simple Docker-based self-hosting
-> - Polished trip list & detail views for day‑to‑day planning
 
 ## Stack
 

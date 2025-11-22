@@ -28,6 +28,7 @@ model Trip {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   segments     Segment[]
+  attachments Attachment[]
 
   @@index([userId, startDate])
 }
@@ -54,7 +55,8 @@ model Segment {
   trip             Trip          @relation(fields: [tripId], references: [id])
   type             SegmentType
   transportMode    TransportMode?
-  title            String
+  title            String?
+  attachments     Attachment[]
   startTime        DateTime
   endTime          DateTime?
   location         String?
@@ -70,3 +72,20 @@ model Segment {
 
   @@index([tripId, startTime])
 }
+
+model Attachment {
+  id           String   @id @default(uuid())
+  tripId       String?
+  segmentId    String?
+  trip         Trip?    @relation(fields: [tripId], references: [id])
+  segment      Segment? @relation(fields: [segmentId], references: [id])
+  path         String
+  originalName String
+  mimeType     String?
+  size         Int?
+  createdAt    DateTime @default(now())
+
+  @@index([tripId])
+  @@index([segmentId])
+}
+

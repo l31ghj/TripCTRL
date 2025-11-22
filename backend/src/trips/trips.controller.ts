@@ -31,6 +31,18 @@ function tripImageStorage() {
   });
 }
 
+function attachmentStorage() {
+  return diskStorage({
+    destination: 'uploads/attachments',
+    filename: (_req: any, file: any, cb: any) => {
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const extension = extname(file.originalname) || '';
+      cb(null, `${unique}${extension}`);
+    },
+  });
+}
+
+
 @UseGuards(JwtAuthGuard)
 @Controller('trips')
 export class TripsController {
@@ -80,6 +92,31 @@ export class TripsController {
   ) {
     const publicPath = `/uploads/trips/${file.filename}`;
     return this.trips.updateTripImage(req.user.userId, id, publicPath);
+  }
+
+
+  @Post(':id/attachments')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: attachmentStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  async uploadAttachment(
+    @Req() req: any,
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    const publicPath = `/uploads/attachments/${file.filename}`;
+    return this.trips.addTripAttachment(req.user.userId, id, {
+      path: publicPath,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    });
   }
 
   @Delete(':id')

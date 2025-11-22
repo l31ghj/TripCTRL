@@ -72,6 +72,31 @@ export class SegmentsService {
     });
   }
 
+
+  async addSegmentAttachment(
+    userId: string,
+    segmentId: string,
+    data: { path: string; originalName: string; mimeType?: string; size?: number },
+  ) {
+    const segment = await this.prisma.segment.findUnique({
+      where: { id: segmentId },
+      include: { trip: true },
+    });
+    if (!segment || segment.trip.userId !== userId) {
+      throw new NotFoundException('Segment not found');
+    }
+
+    return this.prisma.attachment.create({
+      data: {
+        segmentId,
+        path: data.path,
+        originalName: data.originalName,
+        mimeType: data.mimeType,
+        size: data.size,
+      },
+    });
+  }
+
   async deleteSegment(userId: string, segmentId: string) {
     const segment = await this.prisma.segment.findUnique({
       where: { id: segmentId },

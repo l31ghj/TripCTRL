@@ -18,6 +18,8 @@ services:
       JWT_SECRET: "change-this"
     depends_on:
       - db
+    volumes:
+      - ./uploads:/app/uploads
     ports:
       - "8000:8000"
     restart: unless-stopped

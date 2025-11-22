@@ -10,7 +10,8 @@ export class CreateSegmentDto {
   transportMode?: TransportMode;
 
   @IsString()
-  title!: string;
+  @IsOptional()
+  title?: string;
 
   @IsDateString()
   startTime!: string;

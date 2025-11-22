@@ -4,10 +4,20 @@ import { getTrip } from '../api/trips';
 import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
-import { api } from '../api/client';
+import { buildImageUrl } from '../api/client';
+import { uploadTripAttachment, uploadSegmentAttachment } from '../api/attachments';
 import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
+
+type Attachment = {
+  id: string;
+  path: string;
+  originalName: string;
+  mimeType?: string | null;
+  size?: number | null;
+};
+
 
 type SegmentFormState = {
   id?: string;
@@ -135,6 +145,10 @@ export default function TripDetailPage() {
   );
   const [segmentError, setSegmentError] = useState<string | null>(null);
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
+  const [showSegmentForm, setShowSegmentForm] = useState(false);
+  const [uploadingAttachmentTrip, setUploadingAttachmentTrip] = useState(false);
+  const [uploadingAttachmentSegmentId, setUploadingAttachmentSegmentId] =
+    useState<string | null>(null);
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
   const [tripFormOpen, setTripFormOpen] = useState(false);
@@ -252,8 +266,8 @@ export default function TripDetailPage() {
     e.preventDefault();
     if (!id) return;
 
-    if (!segmentForm.title || !segmentForm.startTime) {
-      setSegmentError('Title and start time are required.');
+    if (!segmentForm.startTime) {
+      setSegmentError('Start time is required.');
       return;
     }
 
@@ -266,33 +280,13 @@ export default function TripDetailPage() {
           segmentForm.type === 'transport'
             ? segmentForm.transportMode || null
             : null,
-        title: segmentForm.title,
+        title: segmentForm.title || undefined,
         startTime: toIso(segmentForm.startTime),
         endTime: toIso(segmentForm.endTime),
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
-        flightNumber: segmentForm.flightNumber || undefined,
-        seatNumber: segmentForm.seatNumber || undefined,
-        passengerName: segmentForm.passengerName || undefined,
-      };
-
-      let updatedTrip: TripDetail;
-      if (editingSegmentId) {
-        updatedTrip = await updateSegment(editingSegmentId, payload);
-      } else {
-        updatedTrip = await createSegment(id, payload);
-      }
-
-      setTrip(updatedTrip);
-      resetSegmentForm();
-    } catch (err: any) {
-      console.error(err);
-      setSegmentError('Failed to save segment. Please try again.');
-    }
-  }
-
-  function handleEditSegment(seg: Segment) {
+        flightNumber: segmentForm  function handleEditSegment(seg: Segment) {
     setEditingSegmentId(seg.id);
     setSegmentForm({
       id: seg.id,
@@ -319,9 +313,8 @@ export default function TripDetailPage() {
     if (!id) return;
     if (!confirm('Delete this segment?')) return;
     try {
-      await deleteSegment(seg.id);
-      const updatedTrip = await getTrip(id);
-      setTrip(updatedTrip);
+      const updated = await deleteSegment(id, seg.id);
+      setTrip(updated);
       if (editingSegmentId === seg.id) resetSegmentForm();
     } catch (err: any) {
       console.error(err);
@@ -494,6 +487,58 @@ export default function TripDetailPage() {
           </div>
         </section>
 
+        {/* Trip attachments */}
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Attachments
+            </h3>
+            <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+              {uploadingAttachmentTrip ? 'Uploading…' : 'Attach file'}
+              <input
+                type="file"
+                className="hidden"
+                onChange={async (e) => {
+                  if (!trip || !id || !e.target.files?.[0]) return;
+                  try {
+                    setUploadingAttachmentTrip(true);
+                    await uploadTripAttachment(id, e.target.files[0]);
+                    const fresh = await getTrip(id);
+                    setTrip(fresh);
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setUploadingAttachmentTrip(false);
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </label>
+          </div>
+          {Array.isArray((trip as any).attachments) &&
+          (trip as any).attachments.length > 0 ? (
+            <ul className="space-y-1 text-xs">
+              {(trip as any).attachments.map((att: Attachment) => (
+                <li key={att.id}>
+                  <a
+                    href={buildImageUrl(att.path)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {att.originalName}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              No attachments yet.
+            </p>
+          )}
+        </section>
+
+
         {/* Trip details modal */}
         {tripFormOpen && (
           <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
@@ -596,16 +641,29 @@ export default function TripDetailPage() {
         <section className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           {/* Segment form */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+            
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 New segment
               </h2>
-              {segmentError && (
-                <span className="text-xs text-red-600 dark:text-red-300">
-                  {segmentError}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {segmentError && (
+                  <span className="text-xs text-red-600 dark:text-red-300">
+                    {segmentError}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowSegmentForm((prev) => !prev)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                  title={showSegmentForm ? 'Hide new segment form' : 'Add new segment'}
+                >
+                  +
+                </button>
+              </div>
             </div>
+
+            {showSegmentForm && (
             <form
               onSubmit={handleSegmentSubmit}
               className="grid grid-cols-1 gap-3 text-xs text-slate-700 md:grid-cols-2 dark:text-slate-200"
@@ -805,6 +863,8 @@ export default function TripDetailPage() {
                 </button>
               </div>
             </form>
+            )}
+
           </section>
 
           {/* Itinerary */}
@@ -873,6 +933,29 @@ export default function TripDetailPage() {
                                         Ref: {s.confirmationCode}
                                       </div>
                                     )}
+                                    <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
+                                      <label className="cursor-pointer hover:underline">
+                                        {uploadingAttachmentSegmentId === s.id ? 'Uploading…' : 'Attach file'}
+                                        <input
+                                          type="file"
+                                          className="hidden"
+                                          onChange={async (e) => {
+                                            if (!trip || !id || !e.target.files?.[0]) return;
+                                            try {
+                                              setUploadingAttachmentSegmentId(s.id);
+                                              await uploadSegmentAttachment(s.id, e.target.files[0]);
+                                              const fresh = await getTrip(id);
+                                              setTrip(fresh);
+                                            } catch (err) {
+                                              console.error(err);
+                                            } finally {
+                                              setUploadingAttachmentSegmentId(null);
+                                              e.target.value = '';
+                                            }
+                                          }}
+                                        />
+                                      </label>
+                                    </div>
                                     {(s.flightNumber ||
                                       s.seatNumber ||
                                       s.passengerName) && (
