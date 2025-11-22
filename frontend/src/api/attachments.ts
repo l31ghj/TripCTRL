@@ -51,16 +51,29 @@ export async function deleteTripAttachment(
   tripId: string,
   attachmentId: string,
 ): Promise<void> {
-  await api<void>(`/trips/${tripId}/attachments/${attachmentId}`, {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/attachments/${attachmentId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} – ${text}`);
+  }
 }
 
 export async function deleteSegmentAttachment(
   segmentId: string,
   attachmentId: string,
 ): Promise<void> {
-  await api<void>(`/segments/${segmentId}/attachments/${attachmentId}`, {
-    method: 'DELETE',
-  });
+  const res = await fetch(
+    `${API_BASE}/segments/${segmentId}/attachments/${attachmentId}`,
+    {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} – ${text}`);
+  }
 }

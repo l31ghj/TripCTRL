@@ -149,6 +149,9 @@ export default function TripDetailPage() {
   const [uploadingAttachmentTrip, setUploadingAttachmentTrip] = useState(false);
   const [uploadingAttachmentSegmentId, setUploadingAttachmentSegmentId] =
     useState<string | null>(null);
+  const [deletingTripAttachmentId, setDeletingTripAttachmentId] = useState<string | null>(null);
+  const [deletingSegmentAttachmentId, setDeletingSegmentAttachmentId] = useState<string | null>(null);
+
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
   const [tripFormOpen, setTripFormOpen] = useState(false);
@@ -360,19 +363,6 @@ async function handleImageChange(e: any) {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
-        <NavBar />
-        <main className="mx-auto flex max-w-5xl flex-1 items-center justify-center px-4">
-          <p className="text-sm text-slate-500 dark:text-slate-300">
-            Loading trip…
-          </p>
-        </main>
-      </div>
-    );
-  }
-
 
   async function handleDeleteTripAttachment(attachmentId: string) {
     if (!id) return;
@@ -400,6 +390,19 @@ async function handleImageChange(e: any) {
     } finally {
       setDeletingSegmentAttachmentId(null);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+        <NavBar />
+        <main className="mx-auto flex max-w-5xl flex-1 items-center justify-center px-4">
+          <p className="text-sm text-slate-500 dark:text-slate-300">
+            Loading trip…
+          </p>
+        </main>
+      </div>
+    );
   }
 
   if (!trip) {
@@ -455,9 +458,9 @@ async function handleImageChange(e: any) {
         {/* Trip header */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
           <div className="relative h-48 w-full overflow-hidden">
-            {trip.imagePath ? (
+            {buildImageUrl(trip.imagePath) ? (
               <img
-                src={trip.imagePath}
+                src={buildImageUrl(trip.imagePath) as string}
                 alt={trip.title}
                 className="h-full w-full object-cover"
               />
@@ -1018,9 +1021,27 @@ async function handleImageChange(e: any) {
                                     {(s.flightNumber ||
                                       s.seatNumber ||
                                       s.passengerName) && (
-                                      )
-                                    }
-
+                                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
+                                        {s.flightNumber && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>✈️</span>
+                                            <span>{s.flightNumber}</span>
+                                          </span>
+                                        )}
+                                        {s.seatNumber && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>💺</span>
+                                            <span>{s.seatNumber}</span>
+                                          </span>
+                                        )}
+                                        {s.passengerName && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>👤</span>
+                                            <span>{s.passengerName}</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
                                     {Array.isArray((s as any).attachments) &&
                                       (s as any).attachments.length > 0 && (
                                       <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
@@ -1052,28 +1073,6 @@ async function handleImageChange(e: any) {
                                           </li>
                                         ))}
                                       </ul>
-                                    )}
-
-                                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
-                                        {s.flightNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>✈️</span>
-                                            <span>{s.flightNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.seatNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>💺</span>
-                                            <span>{s.seatNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.passengerName && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>👤</span>
-                                            <span>{s.passengerName}</span>
-                                          </span>
-                                        )}
-                                      </div>
                                     )}
                                   </div>
                                 </div>
