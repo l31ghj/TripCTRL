@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getTrip, deleteTrip, Segment } from '../api/trips';
+import { getTrip } from '../api/trips';
+import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { api } from '../api/client';
@@ -136,12 +137,11 @@ export default function TripDetailPage() {
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
+  const [showSegmentForm, setShowSegmentForm] = useState(false);
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [tripFormError, setTripFormError] = useState<string | null>(null);
 
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [deletingTrip, setDeletingTrip] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -240,21 +240,6 @@ export default function TripDetailPage() {
     } catch (err: any) {
       console.error(err);
       setTripFormError('Failed to update trip details. Please try again.');
-    }
-  }
-
-  async function handleDeleteTrip() {
-    if (!id || !trip) return;
-    try {
-      setDeletingTrip(true);
-      setTripError(null);
-      await deleteTrip(id);
-      setConfirmDeleteOpen(false);
-      navigate('/trips');
-    } catch (err: any) {
-      console.error(err);
-      setTripError('Failed to delete trip. Please try again.');
-      setDeletingTrip(false);
     }
   }
 
@@ -481,7 +466,7 @@ export default function TripDetailPage() {
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/40 bg-black/20 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
                     <span>{uploadingImage ? 'Uploading…' : 'Change cover'}</span>
                     <input
                       type="file"
@@ -494,41 +479,10 @@ export default function TripDetailPage() {
                   <button
                     type="button"
                     onClick={() => setTripFormOpen(true)}
-                    className="inline-flex items-center gap-1 rounded-full border border-white/40 bg-black/20 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20"
+                    className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20"
                   >
                     ✏️ Edit details
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteOpen(true)}
-                    className="inline-flex items-center gap-1 rounded-full border border-red-300/70 bg-red-600/70 px-3 py-1 text-xs font-medium text-red-50 backdrop-blur hover:bg-red-500/80"
-                  >
-                    🗑 Delete trip
-                  </button>
-                  {confirmDeleteOpen && (
-                    <div className="mt-1 w-full max-w-xs rounded-xl border border-red-200 bg-red-50/95 px-3 py-2 text-xs text-red-800 shadow-sm backdrop-blur-sm dark:border-red-700/80 dark:bg-red-900/90 dark:text-red-50">
-                      <p className="mb-2 font-medium">
-                        Are you sure you want to delete this trip?
-                      </p>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteOpen(false)}
-                          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-                        >
-                          No
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleDeleteTrip}
-                          disabled={deletingTrip}
-                          className="rounded-full border border-red-500 bg-red-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {deletingTrip ? 'Deleting…' : 'Yes, delete'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
               {trip.notes && (
@@ -652,7 +606,15 @@ export default function TripDetailPage() {
                 </span>
               )}
             </div>
-            <form
+            <button
+    type="button"
+    onClick={() => setShowSegmentForm(!showSegmentForm)}
+    className="mb-2 inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+  >
+    {showSegmentForm ? 'Hide new segment' : 'Add new segment'}
+  </button>
+  {showSegmentForm && (
+  <form
               onSubmit={handleSegmentSubmit}
               className="grid grid-cols-1 gap-3 text-xs text-slate-700 md:grid-cols-2 dark:text-slate-200"
             >
@@ -850,7 +812,7 @@ export default function TripDetailPage() {
                   {editingSegmentId ? 'Update segment' : 'Add segment'}
                 </button>
               </div>
-            </form>
+            </form>)}
           </section>
 
           {/* Itinerary */}
