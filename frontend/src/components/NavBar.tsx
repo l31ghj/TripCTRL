@@ -31,7 +31,7 @@ export function NavBar() {
 
   function handleLogout() {
     logout();
-    window.location.href = '/login';
+    window.location.href = '/';
   }
 
   const isDark = theme === 'dark';

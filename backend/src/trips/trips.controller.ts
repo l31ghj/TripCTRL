@@ -119,6 +119,16 @@ export class TripsController {
     });
   }
 
+
+  @Delete(':id/attachments/:attachmentId')
+  removeAttachment(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+  ) {
+    return this.trips.deleteTripAttachment(req.user.userId, id, attachmentId);
+  }
+
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.trips.deleteTrip(req.user.userId, id);

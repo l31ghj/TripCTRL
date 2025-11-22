@@ -5,7 +5,7 @@ import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { buildImageUrl } from '../api/client';
-import { uploadTripAttachment, uploadSegmentAttachment } from '../api/attachments';
+import { uploadTripAttachment, uploadSegmentAttachment, deleteTripAttachment, deleteSegmentAttachment } from '../api/attachments';
 import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
@@ -373,6 +373,35 @@ async function handleImageChange(e: any) {
     );
   }
 
+
+  async function handleDeleteTripAttachment(attachmentId: string) {
+    if (!id) return;
+    try {
+      setDeletingTripAttachmentId(attachmentId);
+      await deleteTripAttachment(id, attachmentId);
+      const fresh = await getTrip(id);
+      setTrip(fresh);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingTripAttachmentId(null);
+    }
+  }
+
+  async function handleDeleteSegmentAttachment(segmentId: string, attachmentId: string) {
+    if (!id) return;
+    try {
+      setDeletingSegmentAttachmentId(attachmentId);
+      await deleteSegmentAttachment(segmentId, attachmentId);
+      const fresh = await getTrip(id);
+      setTrip(fresh);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingSegmentAttachmentId(null);
+    }
+  }
+
   if (!trip) {
     return (
       <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
@@ -426,9 +455,9 @@ async function handleImageChange(e: any) {
         {/* Trip header */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
           <div className="relative h-48 w-full overflow-hidden">
-            {buildImageUrl(trip.imagePath) ? (
+            {trip.imagePath ? (
               <img
-                src={buildImageUrl(trip.imagePath) as string}
+                src={trip.imagePath}
                 alt={trip.title}
                 className="h-full w-full object-cover"
               />
@@ -541,15 +570,23 @@ async function handleImageChange(e: any) {
           (trip as any).attachments.length > 0 ? (
             <ul className="space-y-1 text-xs">
               {(trip as any).attachments.map((att: Attachment) => (
-                <li key={att.id}>
+                <li key={att.id} className="flex items-center justify-between gap-2">
                   <a
                     href={buildImageUrl(att.path)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-blue-600 hover:underline dark:text-blue-400"
+                    className="truncate text-blue-600 hover:underline dark:text-blue-400"
                   >
                     {att.originalName}
                   </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTripAttachment(att.id)}
+                    className="text-[10px] text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
+                    disabled={deletingTripAttachmentId === att.id}
+                  >
+                    {deletingTripAttachmentId === att.id ? 'Removing…' : 'Remove'}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -981,6 +1018,42 @@ async function handleImageChange(e: any) {
                                     {(s.flightNumber ||
                                       s.seatNumber ||
                                       s.passengerName) && (
+                                      )
+                                    }
+
+                                    {Array.isArray((s as any).attachments) &&
+                                      (s as any).attachments.length > 0 && (
+                                      <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                                        {(s as any).attachments.map((att: Attachment) => (
+                                          <li
+                                            key={att.id}
+                                            className="flex items-center justify-between gap-2"
+                                          >
+                                            <a
+                                              href={buildImageUrl(att.path)}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="truncate hover:underline"
+                                            >
+                                              {att.originalName}
+                                            </a>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleDeleteSegmentAttachment(s.id, att.id)
+                                              }
+                                              className="text-[10px] text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
+                                              disabled={deletingSegmentAttachmentId === att.id}
+                                            >
+                                              {deletingSegmentAttachmentId === att.id
+                                                ? 'Removing…'
+                                                : 'Remove'}
+                                            </button>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+
                                       <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
                                         {s.flightNumber && (
                                           <span className="inline-flex items-center gap-1">

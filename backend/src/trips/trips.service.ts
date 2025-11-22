@@ -88,6 +88,27 @@ export class TripsService {
       },
     });
   }
+
+
+  async deleteTripAttachment(userId: string, tripId: string, attachmentId: string) {
+    const trip = await this.prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
+
+    const attachment = await this.prisma.attachment.findFirst({
+      where: { id: attachmentId, tripId },
+    });
+    if (!attachment) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    await this.prisma.attachment.delete({ where: { id: attachmentId } });
+    return { success: true };
+  }
+
   async deleteTrip(userId: string, tripId: string) {
     await this.getTrip(userId, tripId);
     await this.prisma.segment.deleteMany({ where: { tripId } });

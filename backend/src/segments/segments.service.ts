@@ -97,6 +97,32 @@ export class SegmentsService {
     });
   }
 
+
+
+  async deleteSegmentAttachment(
+    userId: string,
+    segmentId: string,
+    attachmentId: string,
+  ) {
+    const segment = await this.prisma.segment.findUnique({
+      where: { id: segmentId },
+      include: { trip: true },
+    });
+    if (!segment || segment.trip.userId !== userId) {
+      throw new NotFoundException('Segment not found');
+    }
+
+    const attachment = await this.prisma.attachment.findFirst({
+      where: { id: attachmentId, segmentId },
+    });
+    if (!attachment) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    await this.prisma.attachment.delete({ where: { id: attachmentId } });
+    return { success: true };
+  }
+
   async deleteSegment(userId: string, segmentId: string) {
     const segment = await this.prisma.segment.findUnique({
       where: { id: segmentId },

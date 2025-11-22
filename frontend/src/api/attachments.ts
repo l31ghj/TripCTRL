@@ -45,3 +45,22 @@ export async function uploadSegmentAttachment(
 
   return res.json();
 }
+
+
+export async function deleteTripAttachment(
+  tripId: string,
+  attachmentId: string,
+): Promise<void> {
+  await api<void>(`/trips/${tripId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function deleteSegmentAttachment(
+  segmentId: string,
+  attachmentId: string,
+): Promise<void> {
+  await api<void>(`/segments/${segmentId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+  });
+}

@@ -80,6 +80,16 @@ export class SegmentsController {
     });
   }
 
+
+  @Delete('segments/:id/attachments/:attachmentId')
+  removeAttachment(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+  ) {
+    return this.segments.deleteSegmentAttachment(req.user.userId, id, attachmentId);
+  }
+
   @Delete('segments/:id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.segments.deleteSegment(req.user.userId, id);
