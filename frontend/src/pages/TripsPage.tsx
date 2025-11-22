@@ -215,7 +215,7 @@ export function TripsPage() {
                 return (
                   <Link
                     key={trip.id}
-                    to={`/trip/${trip.id}`}
+                    to={`/trips/${trip.id}`}
                     className="flex w-full items-stretch gap-3 rounded-2xl border border-slate-200 bg-white/90 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/90"
                   >
                     {coverUrl && (
@@ -278,7 +278,7 @@ export function TripsPage() {
                         return (
                           <Link
                             key={trip.id}
-                            to={`/trip/${trip.id}`}
+                            to={`/trips/${trip.id}`}
                             className="flex w-full items-stretch gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80"
                           >
                             {coverUrl && (
