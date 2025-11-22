@@ -9,7 +9,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (localStorage.getItem('accessToken')) {
-      window.location.href = '/trips';
+      window.location.href = '/';
     }
   }, []);
 
@@ -22,7 +22,7 @@ export function LoginPage() {
       } else {
         await login(email, password);
       }
-      window.location.href = '/trips';
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message ?? 'Error');
     }
