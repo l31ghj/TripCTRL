@@ -137,7 +137,6 @@ export default function TripDetailPage() {
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
-  const [showSegmentForm, setShowSegmentForm] = useState(false);
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [tripFormError, setTripFormError] = useState<string | null>(null);
 
@@ -280,7 +279,7 @@ export default function TripDetailPage() {
 
       let updatedTrip: TripDetail;
       if (editingSegmentId) {
-        updatedTrip = await updateSegment(id, editingSegmentId, payload);
+        updatedTrip = await updateSegment(editingSegmentId, payload);
       } else {
         updatedTrip = await createSegment(id, payload);
       }
@@ -320,8 +319,9 @@ export default function TripDetailPage() {
     if (!id) return;
     if (!confirm('Delete this segment?')) return;
     try {
-      const updated = await deleteSegment(id, seg.id);
-      setTrip(updated);
+      await deleteSegment(seg.id);
+      const updatedTrip = await getTrip(id);
+      setTrip(updatedTrip);
       if (editingSegmentId === seg.id) resetSegmentForm();
     } catch (err: any) {
       console.error(err);
@@ -606,15 +606,7 @@ export default function TripDetailPage() {
                 </span>
               )}
             </div>
-            <button
-    type="button"
-    onClick={() => setShowSegmentForm(!showSegmentForm)}
-    className="mb-2 inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-  >
-    {showSegmentForm ? 'Hide new segment' : 'Add new segment'}
-  </button>
-  {showSegmentForm && (
-  <form
+            <form
               onSubmit={handleSegmentSubmit}
               className="grid grid-cols-1 gap-3 text-xs text-slate-700 md:grid-cols-2 dark:text-slate-200"
             >
@@ -812,7 +804,7 @@ export default function TripDetailPage() {
                   {editingSegmentId ? 'Update segment' : 'Add segment'}
                 </button>
               </div>
-            </form>)}
+            </form>
           </section>
 
           {/* Itinerary */}
