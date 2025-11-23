@@ -304,9 +304,9 @@ export default function TripDetailPage() {
           segmentForm.type === 'transport'
             ? segmentForm.transportMode || null
             : null,
-        title: title || undefined,
-        startTime: startIso,
-        endTime: endIso,
+        title: segmentForm.title || undefined,
+        startTime: toIso(startString),
+        endTime: toIso(segmentForm.endTime),
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
