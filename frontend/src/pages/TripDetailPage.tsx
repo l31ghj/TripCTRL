@@ -5,7 +5,7 @@ import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { buildImageUrl } from '../api/client';
-import { uploadTripAttachment, uploadSegmentAttachment, deleteTripAttachment, deleteSegmentAttachment } from '../api/attachments';
+import { uploadTripAttachment, uploadSegmentAttachment } from '../api/attachments';
 import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
@@ -32,6 +32,7 @@ type SegmentFormState = {
   flightNumber: string;
   seatNumber: string;
   passengerName: string;
+  details: string;
 };
 
 type TripFormState = {
@@ -62,6 +63,7 @@ const emptySegmentForm: SegmentFormState = {
   flightNumber: '',
   seatNumber: '',
   passengerName: '',
+  details: '',
 };
 
 function toLocalInputValue(iso: string) {
@@ -149,9 +151,6 @@ export default function TripDetailPage() {
   const [uploadingAttachmentTrip, setUploadingAttachmentTrip] = useState(false);
   const [uploadingAttachmentSegmentId, setUploadingAttachmentSegmentId] =
     useState<string | null>(null);
-  const [deletingTripAttachmentId, setDeletingTripAttachmentId] = useState<string | null>(null);
-  const [deletingSegmentAttachmentId, setDeletingSegmentAttachmentId] = useState<string | null>(null);
-
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
   const [tripFormOpen, setTripFormOpen] = useState(false);
@@ -270,13 +269,26 @@ export default function TripDetailPage() {
     e.preventDefault();
     if (!id) return;
 
-    if (!segmentForm.startTime) {
+    if (!segmentForm.startTime && segmentForm.type !== 'note') {
       setSegmentError('Start time is required.');
       return;
     }
 
     try {
       setSegmentError(null);
+
+      let startString = segmentForm.startTime;
+      if (!startString && segmentForm.type === 'note') {
+        if (trip?.startDate) {
+          startString = `${trip.startDate}T09:00`;
+        } else {
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, '0');
+          const dd = String(today.getDate()).padStart(2, '0');
+          startString = `${yyyy}-${mm}-${dd}T09:00`;
+        }
+      }
 
       const payload: any = {
         type: segmentForm.type,
@@ -285,7 +297,7 @@ export default function TripDetailPage() {
             ? segmentForm.transportMode || null
             : null,
         title: segmentForm.title || undefined,
-        startTime: toIso(segmentForm.startTime),
+        startTime: toIso(startString),
         endTime: toIso(segmentForm.endTime),
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
@@ -293,6 +305,7 @@ export default function TripDetailPage() {
         flightNumber: segmentForm.flightNumber || undefined,
         seatNumber: segmentForm.seatNumber || undefined,
         passengerName: segmentForm.passengerName || undefined,
+        details: segmentForm.details ? segmentForm.details : undefined,
       };
 
       let updatedTrip: TripDetail;
@@ -363,35 +376,6 @@ async function handleImageChange(e: any) {
     }
   }
 
-
-  async function handleDeleteTripAttachment(attachmentId: string) {
-    if (!id) return;
-    try {
-      setDeletingTripAttachmentId(attachmentId);
-      await deleteTripAttachment(id, attachmentId);
-      const fresh = await getTrip(id);
-      setTrip(fresh);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setDeletingTripAttachmentId(null);
-    }
-  }
-
-  async function handleDeleteSegmentAttachment(segmentId: string, attachmentId: string) {
-    if (!id) return;
-    try {
-      setDeletingSegmentAttachmentId(attachmentId);
-      await deleteSegmentAttachment(segmentId, attachmentId);
-      const fresh = await getTrip(id);
-      setTrip(fresh);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setDeletingSegmentAttachmentId(null);
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
@@ -458,9 +442,9 @@ async function handleImageChange(e: any) {
         {/* Trip header */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
           <div className="relative h-48 w-full overflow-hidden">
-            {buildImageUrl(trip.imagePath) ? (
+            {trip.imagePath ? (
               <img
-                src={buildImageUrl(trip.imagePath) as string}
+                src={trip.imagePath}
                 alt={trip.title}
                 className="h-full w-full object-cover"
               />
@@ -573,23 +557,15 @@ async function handleImageChange(e: any) {
           (trip as any).attachments.length > 0 ? (
             <ul className="space-y-1 text-xs">
               {(trip as any).attachments.map((att: Attachment) => (
-                <li key={att.id} className="flex items-center justify-between gap-2">
+                <li key={att.id}>
                   <a
                     href={buildImageUrl(att.path)}
                     target="_blank"
                     rel="noreferrer"
-                    className="truncate text-blue-600 hover:underline dark:text-blue-400"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
                   >
                     {att.originalName}
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteTripAttachment(att.id)}
-                    className="text-[10px] text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
-                    disabled={deletingTripAttachmentId === att.id}
-                  >
-                    {deletingTripAttachmentId === att.id ? 'Removing…' : 'Remove'}
-                  </button>
                 </li>
               ))}
             </ul>
@@ -787,7 +763,7 @@ async function handleImageChange(e: any) {
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Start time
+                  {segmentForm.type === 'accommodation' ? 'Check-in time' : 'Start time'}
                 </label>
                 <input
                   type="datetime-local"
@@ -983,16 +959,21 @@ async function handleImageChange(e: any) {
                                     )}
                                   </div>
                                   <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-300">
-                                    {(s.location || s.provider) && (
+                                    {s.type !== 'note' && (s.location || s.provider) && (
                                       <div>
                                         {s.location}
                                         {s.location && s.provider && ' · '}
                                         {s.provider}
                                       </div>
                                     )}
-                                    {s.confirmationCode && (
+                                    {s.type !== 'note' && s.confirmationCode && (
                                       <div className="text-[11px] text-slate-400 dark:text-slate-400">
                                         Ref: {s.confirmationCode}
+                                      </div>
+                                    )}
+                                    {(s as any).details && (
+                                      <div className="text-[11px] text-slate-500 dark:text-slate-300">
+                                        {String((s as any).details)}
                                       </div>
                                     )}
                                     <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
@@ -1041,38 +1022,6 @@ async function handleImageChange(e: any) {
                                           </span>
                                         )}
                                       </div>
-                                    )}
-                                    {Array.isArray((s as any).attachments) &&
-                                      (s as any).attachments.length > 0 && (
-                                      <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                                        {(s as any).attachments.map((att: Attachment) => (
-                                          <li
-                                            key={att.id}
-                                            className="flex items-center justify-between gap-2"
-                                          >
-                                            <a
-                                              href={buildImageUrl(att.path)}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className="truncate hover:underline"
-                                            >
-                                              {att.originalName}
-                                            </a>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                handleDeleteSegmentAttachment(s.id, att.id)
-                                              }
-                                              className="text-[10px] text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
-                                              disabled={deletingSegmentAttachmentId === att.id}
-                                            >
-                                              {deletingSegmentAttachmentId === att.id
-                                                ? 'Removing…'
-                                                : 'Remove'}
-                                            </button>
-                                          </li>
-                                        ))}
-                                      </ul>
                                     )}
                                   </div>
                                 </div>
