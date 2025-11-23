@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getTrip } from '../api/trips';
-import { Segment } from '../api/trips';
+import { getTrip, Trip, Segment, Attachment, SegmentDetails } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { buildImageUrl } from '../api/client';
@@ -15,13 +14,6 @@ import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
 
-type Attachment = {
-  id: string;
-  path: string;
-  originalName: string;
-  mimeType?: string | null;
-  size?: number | null;
-};
 
 
 type SegmentFormState = {
@@ -567,10 +559,10 @@ async function handleImageChange(e: any) {
               />
             </label>
           </div>
-          {Array.isArray((trip as any).attachments) &&
-          (trip as any).attachments.length > 0 ? (
+          {Array.isArray(trip.attachments) &&
+          trip.attachments.length > 0 ? (
             <ul className="space-y-1 text-xs">
-              {(trip as any).attachments.map((att: Attachment) => (
+              {trip.attachments.map((att: Attachment) => (
                 <li key={att.id} className="flex items-center justify-between gap-2">
                   <a
                     href={buildImageUrl(att.path)}
@@ -1017,16 +1009,16 @@ async function handleImageChange(e: any) {
                                         Ref: {s.confirmationCode}
                                       </div>
                                     )}
-                                    {((s as any).details &&
-                                      (typeof (s as any).details === 'string'
-                                        ? (s as any).details
-                                        : (s as any).details?.activityNotes ??
-                                          (s as any).details?.notes)) && (
+                                    {(s.details &&
+                                      (typeof s.details === 'string'
+                                        ? s.details
+                                        : s.details.activityNotes ??
+                                          s.details.notes)) && (
                                       <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                                        {typeof (s as any).details === 'string'
-                                          ? (s as any).details
-                                          : (s as any).details?.activityNotes ??
-                                            (s as any).details?.notes}
+                                        {typeof s.details === 'string'
+                                          ? s.details
+                                          : s.details.activityNotes ??
+                                            s.details.notes}
                                       </div>
                                     )}
                                     <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
@@ -1052,10 +1044,10 @@ async function handleImageChange(e: any) {
                                         />
                                       </label>
                                       <div className="ml-2 flex-1 text-right">
-                                        {Array.isArray((s as any).attachments) &&
-                                        (s as any).attachments.length > 0 && (
+                                        {Array.isArray(s.attachments) &&
+                                        s.attachments.length > 0 && (
                                           <ul className="space-y-1">
-                                            {(s as any).attachments.map((att: Attachment) => (
+                                            {s.attachments.map((att: Attachment) => (
                                               <li
                                                 key={att.id}
                                                 className="flex items-center justify-end gap-2"

@@ -19,6 +19,12 @@ export type Trip = {
   attachments?: Attachment[] | null;
 };
 
+export type SegmentDetails = {
+  activityNotes?: string;
+  notes?: string;
+  [key: string]: any;
+};
+
 export type Segment = {
   id: string;
   type: string;
@@ -32,7 +38,8 @@ export type Segment = {
   flightNumber?: string | null;
   seatNumber?: string | null;
   passengerName?: string | null;
-  details?: any;
+  details?: SegmentDetails | string | null;
+  attachments?: Attachment[] | null;
 };
 
 export async function listTrips() {
