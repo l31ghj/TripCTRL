@@ -1,5 +1,13 @@
 import { api } from './client';
 
+export type Attachment = {
+  id: string;
+  path: string;
+  originalName: string;
+  mimeType?: string | null;
+  size?: number | null;
+};
+
 export type Trip = {
   id: string;
   title: string;
@@ -7,6 +15,8 @@ export type Trip = {
   startDate: string;
   endDate: string;
   notes?: string | null;
+  imagePath?: string | null;
+  attachments?: Attachment[] | null;
 };
 
 export type Segment = {
