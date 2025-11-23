@@ -22,6 +22,7 @@ export type Segment = {
   flightNumber?: string | null;
   seatNumber?: string | null;
   passengerName?: string | null;
+  details?: any;
 };
 
 export async function listTrips() {

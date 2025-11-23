@@ -5,7 +5,12 @@ import { Segment } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { buildImageUrl } from '../api/client';
-import { uploadTripAttachment, uploadSegmentAttachment } from '../api/attachments';
+import {
+  uploadTripAttachment,
+  uploadSegmentAttachment,
+  deleteTripAttachment,
+  deleteSegmentAttachment,
+} from '../api/attachments';
 import { NavBar } from '../components/NavBar';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
@@ -32,7 +37,7 @@ type SegmentFormState = {
   flightNumber: string;
   seatNumber: string;
   passengerName: string;
-  details: string;
+  activityNotes: string;
 };
 
 type TripFormState = {
@@ -63,7 +68,7 @@ const emptySegmentForm: SegmentFormState = {
   flightNumber: '',
   seatNumber: '',
   passengerName: '',
-  details: '',
+  activityNotes: '',
 };
 
 function toLocalInputValue(iso: string) {
@@ -290,22 +295,25 @@ export default function TripDetailPage() {
         }
       }
 
+      const notes =
+        (segmentForm.activityNotes || '').trim();
+
       const payload: any = {
         type: segmentForm.type,
         transportMode:
           segmentForm.type === 'transport'
             ? segmentForm.transportMode || null
             : null,
-        title: segmentForm.title || undefined,
-        startTime: toIso(startString),
-        endTime: toIso(segmentForm.endTime),
+        title: title || undefined,
+        startTime: startIso,
+        endTime: endIso,
         location: segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
         flightNumber: segmentForm.flightNumber || undefined,
         seatNumber: segmentForm.seatNumber || undefined,
         passengerName: segmentForm.passengerName || undefined,
-        details: segmentForm.details ? segmentForm.details : undefined,
+        details: notes ? { activityNotes: notes } : undefined,
       };
 
       let updatedTrip: TripDetail;
@@ -343,6 +351,12 @@ export default function TripDetailPage() {
       flightNumber: seg.flightNumber ?? '',
       seatNumber: seg.seatNumber ?? '',
       passengerName: seg.passengerName ?? '',
+      activityNotes:
+        typeof (seg as any).details === 'string'
+          ? (seg as any).details
+          : (seg as any).details?.activityNotes ??
+            (seg as any).details?.notes ??
+            '',
     });
   }
 
@@ -444,7 +458,7 @@ async function handleImageChange(e: any) {
           <div className="relative h-48 w-full overflow-hidden">
             {trip.imagePath ? (
               <img
-                src={trip.imagePath}
+                src={buildImageUrl(trip.imagePath)}
                 alt={trip.title}
                 className="h-full w-full object-cover"
               />
@@ -557,7 +571,7 @@ async function handleImageChange(e: any) {
           (trip as any).attachments.length > 0 ? (
             <ul className="space-y-1 text-xs">
               {(trip as any).attachments.map((att: Attachment) => (
-                <li key={att.id}>
+                <li key={att.id} className="flex items-center justify-between gap-2">
                   <a
                     href={buildImageUrl(att.path)}
                     target="_blank"
@@ -566,6 +580,23 @@ async function handleImageChange(e: any) {
                   >
                     {att.originalName}
                   </a>
+                  <button
+                    type="button"
+                    className="text-[10px] text-slate-400 hover:text-red-500"
+                    onClick={async () => {
+                      if (!id) return;
+                      if (!confirm('Delete this attachment?')) return;
+                      try {
+                        await deleteTripAttachment(id, att.id);
+                        const fresh = await getTrip(id);
+                        setTrip(fresh);
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
                 </li>
               ))}
             </ul>
@@ -777,7 +808,7 @@ async function handleImageChange(e: any) {
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  End time
+                  {segmentForm.type === 'accommodation' ? 'Check-out time' : 'End time'}
                 </label>
                 <input
                   type="datetime-local"
@@ -830,6 +861,21 @@ async function handleImageChange(e: any) {
                   }
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Activity notes / details
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  rows={3}
+                  value={segmentForm.activityNotes}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('activityNotes', e.target.value)
+                  }
+                  placeholder="Optional notes, booking info, or instructions for this activity"
+                />
+              </div>
+
 
               {segmentForm.type === 'transport' &&
                 segmentForm.transportMode === 'flight' && (
@@ -971,9 +1017,16 @@ async function handleImageChange(e: any) {
                                         Ref: {s.confirmationCode}
                                       </div>
                                     )}
-                                    {(s as any).details && (
-                                      <div className="text-[11px] text-slate-500 dark:text-slate-300">
-                                        {String((s as any).details)}
+                                    {((s as any).details &&
+                                      (typeof (s as any).details === 'string'
+                                        ? (s as any).details
+                                        : (s as any).details?.activityNotes ??
+                                          (s as any).details?.notes)) && (
+                                      <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                                        {typeof (s as any).details === 'string'
+                                          ? (s as any).details
+                                          : (s as any).details?.activityNotes ??
+                                            (s as any).details?.notes}
                                       </div>
                                     )}
                                     <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
@@ -998,6 +1051,45 @@ async function handleImageChange(e: any) {
                                           }}
                                         />
                                       </label>
+                                      <div className="ml-2 flex-1 text-right">
+                                        {Array.isArray((s as any).attachments) &&
+                                        (s as any).attachments.length > 0 && (
+                                          <ul className="space-y-1">
+                                            {(s as any).attachments.map((att: Attachment) => (
+                                              <li
+                                                key={att.id}
+                                                className="flex items-center justify-end gap-2"
+                                              >
+                                                <a
+                                                  href={buildImageUrl(att.path)}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="truncate text-[10px] text-blue-600 hover:underline dark:text-blue-400"
+                                                >
+                                                  {att.originalName}
+                                                </a>
+                                                <button
+                                                  type="button"
+                                                  className="text-[10px] text-slate-400 hover:text-red-500"
+                                                  onClick={async () => {
+                                                    if (!id) return;
+                                                    if (!confirm('Delete this attachment?')) return;
+                                                    try {
+                                                      await deleteSegmentAttachment(s.id, att.id);
+                                                      const fresh = await getTrip(id);
+                                                      setTrip(fresh);
+                                                    } catch (err) {
+                                                      console.error(err);
+                                                    }
+                                                  }}
+                                                >
+                                                  Remove
+                                                </button>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
                                     </div>
                                     {(s.flightNumber ||
                                       s.seatNumber ||
