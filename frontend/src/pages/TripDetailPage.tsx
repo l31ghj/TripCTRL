@@ -385,7 +385,7 @@ async function handleImageChange(e: any) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <NavBar />
         <main className="mx-auto flex max-w-5xl flex-1 items-center justify-center px-4">
           <p className="text-sm text-slate-500 dark:text-slate-300">
@@ -398,7 +398,7 @@ async function handleImageChange(e: any) {
 
   if (!trip) {
     return (
-      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <NavBar />
         <main className="mx-auto flex max-w-5xl flex-1 items-center justify-center px-4">
           <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
@@ -443,7 +443,7 @@ async function handleImageChange(e: any) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <NavBar />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 pb-8 pt-4">
         {/* Trip header */}

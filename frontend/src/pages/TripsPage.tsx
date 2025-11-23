@@ -89,7 +89,7 @@ export function TripsPage() {
   const pastTrips = sortedTrips.filter((t) => getTripStatus(t) === 'past');
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       <NavBar />
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 pb-10 pt-6">
         {error && (
@@ -249,7 +249,7 @@ export function TripsPage() {
                         key={trip.id}
                         type="button"
                         onClick={() => navigate(`/trips/${trip.id}`)}
-                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/80 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-blue-400/80"
+                        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-md ring-1 ring-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-sky-400 hover:shadow-sky-500/25 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-sky-400/80"
                       >
                         {imageUrl && (
                           <div className="relative h-32 w-full overflow-hidden">
