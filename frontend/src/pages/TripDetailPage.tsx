@@ -325,6 +325,7 @@ export default function TripDetailPage() {
 
   function handleEditSegment(seg: Segment) {
     setEditingSegmentId(seg.id);
+    setShowSegmentForm(true);
     setSegmentForm({
       id: seg.id,
       type: seg.type,
