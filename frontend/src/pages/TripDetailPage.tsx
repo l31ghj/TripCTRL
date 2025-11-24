@@ -1034,7 +1034,7 @@ async function handleImageChange(e: any) {
 
           {/* Itinerary */}
           <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+            <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
               Itinerary
             </h2>
             {sortedDayKeys.length === 0 ? (
