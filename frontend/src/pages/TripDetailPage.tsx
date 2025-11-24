@@ -204,6 +204,32 @@ export default function TripDetailPage() {
     [segmentsByDay],
   );
 
+  const tripNights = useMemo(() => {
+    if (!trip) return null;
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
+    const diffMs = end.getTime() - start.getTime();
+    if (!Number.isFinite(diffMs) || diffMs <= 0) return null;
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  }, [trip]);
+
+  const tripAttachmentCount = useMemo(() => {
+    if (!trip || !Array.isArray(trip.attachments)) return 0;
+    return trip.attachments.length;
+  }, [trip]);
+
+  const nextSegment = useMemo(() => {
+    if (!sortedSegments.length) return null;
+    const now = Date.now();
+    for (const s of sortedSegments) {
+      const t = new Date(s.startTime).getTime();
+      if (Number.isFinite(t) && t >= now) {
+        return s;
+      }
+    }
+    return sortedSegments[sortedSegments.length - 1] ?? null;
+  }, [sortedSegments]);
+
   function resetSegmentForm() {
     setSegmentForm(emptySegmentForm);
     setEditingSegmentId(null);
@@ -529,6 +555,68 @@ async function handleImageChange(e: any) {
                 </p>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* Trip summary strip */}
+        <section className="mt-3">
+          <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-700 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
+                🧩
+              </span>
+              <div className="flex flex-col">
+                <span className="font-semibold">
+                  {sortedSegments.length || 0} segment{sortedSegments.length === 1 ? '' : 's'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Organised across your trip
+                </span>
+              </div>
+            </div>
+            {tripNights !== null && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
+                  🌙
+                </span>
+                <div className="flex flex-col">
+                  <span className="font-semibold">
+                    {tripNights} night{tripNights === 1 ? '' : 's'}
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    From start to end dates
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
+                📎
+              </span>
+              <div className="flex flex-col">
+                <span className="font-semibold">
+                  {tripAttachmentCount} attachment{tripAttachmentCount === 1 ? '' : 's'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Linked to this trip
+                </span>
+              </div>
+            </div>
+            {nextSegment && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
+                  ⏭
+                </span>
+                <div className="flex flex-col">
+                  <span className="font-semibold">
+                    Next: {nextSegment.title || getSegmentMeta(nextSegment.type).label}
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {new Date(nextSegment.startTime).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -950,7 +1038,7 @@ async function handleImageChange(e: any) {
               Itinerary
             </h2>
             {sortedDayKeys.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-100/60 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                 No segments yet. Add flights, stays, transport, or activities
                 on the left.
               </div>
@@ -958,174 +1046,190 @@ async function handleImageChange(e: any) {
               <div className="space-y-4">
                 {sortedDayKeys.map((dayKey) => {
                   const daySegments = segmentsByDay[dayKey];
-                  const dateLabel = new Date(dayKey).toLocaleDateString();
+                  const date = new Date(dayKey);
+                  const dateLabel = date.toLocaleDateString();
+                  const weekdayLabel = date.toLocaleDateString(undefined, { weekday: 'long' });
 
                   return (
                     <div
                       key={dayKey}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900"
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"
                     >
-                      <div className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {dateLabel}
+                      <div className="mb-3 flex items-center gap-3 text-xs font-semibold text-slate-900 dark:text-slate-100">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-base dark:bg-slate-800">
+                          📅
+                        </div>
+                        <div>
+                          <div>{dateLabel}</div>
+                          <div className="text-[11px] font-normal text-slate-400 dark:text-slate-400">
+                            {weekdayLabel}
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         {daySegments.map((s) => {
                           const meta = getSegmentMeta(s.type);
+                          const accentClass =
+                            s.type === 'transport'
+                              ? 'border-sky-400/80'
+                              : s.type === 'activity'
+                              ? 'border-purple-400/80'
+                              : s.type === 'accommodation'
+                              ? 'border-emerald-400/80'
+                              : 'border-slate-500/70';
+
                           return (
-                            <div
-                              key={s.id}
-                              className="flex items-start justify-between gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800"
-                            >
-                              <div className="flex flex-1 gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-lg dark:bg-slate-700">
-                                  {meta.icon}
-                                </div>
-                                <div>
-                                  <div className="mb-1 flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                      {s.title}
-                                    </span>
-                                    <span
-                                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.badgeClass}`}
-                                    >
-                                      {meta.label}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-slate-500 dark:text-slate-300">
-                                    {renderTimeRange(
-                                      s.startTime,
-                                      s.endTime,
-                                    )}
-                                  </div>
-                                  <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-300">
-                                    {s.type !== 'note' && (s.location || s.provider) && (
-                                      <div>
-                                        {s.location}
-                                        {s.location && s.provider && ' · '}
-                                        {s.provider}
-                                      </div>
-                                    )}
-                                    {s.type !== 'note' && s.confirmationCode && (
-                                      <div className="text-[11px] text-slate-400 dark:text-slate-400">
-                                        Ref: {s.confirmationCode}
-                                      </div>
-                                    )}
-                                    {(s.details &&
-                                      (typeof s.details === 'string'
-                                        ? s.details
-                                        : s.details.activityNotes ??
-                                          s.details.notes)) && (
-                                      <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                                        {typeof s.details === 'string'
-                                          ? s.details
-                                          : s.details.activityNotes ??
-                                            s.details.notes}
-                                      </div>
-                                    )}
-                                    <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
-                                      <label className="cursor-pointer hover:underline">
-                                        {uploadingAttachmentSegmentId === s.id ? 'Uploading…' : 'Attach file'}
-                                        <input
-                                          type="file"
-                                          className="hidden"
-                                          onChange={async (e) => {
-                                            if (!trip || !id || !e.target.files?.[0]) return;
-                                            try {
-                                              setUploadingAttachmentSegmentId(s.id);
-                                              await uploadSegmentAttachment(s.id, e.target.files[0]);
-                                              const fresh = await getTrip(id);
-                                              setTrip(fresh);
-                                            } catch (err) {
-                                              console.error(err);
-                                            } finally {
-                                              setUploadingAttachmentSegmentId(null);
-                                              e.target.value = '';
-                                            }
-                                          }}
-                                        />
-                                      </label>
-                                      <div className="ml-2 flex-1 text-right">
-                                        {Array.isArray(s.attachments) &&
-                                        s.attachments.length > 0 && (
-                                          <ul className="space-y-1">
-                                            {s.attachments.map((att: Attachment) => (
-                                              <li
-                                                key={att.id}
-                                                className="flex items-center justify-end gap-2"
-                                              >
-                                                <a
-                                                  href={buildImageUrl(att.path)}
-                                                  target="_blank"
-                                                  rel="noreferrer"
-                                                  className="truncate text-[10px] text-blue-600 hover:underline dark:text-blue-400"
-                                                >
-                                                  {att.originalName}
-                                                </a>
-                                                <button
-                                                  type="button"
-                                                  className="text-[10px] text-slate-400 hover:text-red-500"
-                                                  onClick={async () => {
-                                                    if (!id) return;
-                                                    if (!confirm('Delete this attachment?')) return;
-                                                    try {
-                                                      await deleteSegmentAttachment(s.id, att.id);
-                                                      const fresh = await getTrip(id);
-                                                      setTrip(fresh);
-                                                    } catch (err) {
-                                                      console.error(err);
-                                                    }
-                                                  }}
-                                                >
-                                                  Remove
-                                                </button>
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {(s.flightNumber ||
-                                      s.seatNumber ||
-                                      s.passengerName) && (
-                                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
-                                        {s.flightNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>✈️</span>
-                                            <span>{s.flightNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.seatNumber && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>💺</span>
-                                            <span>{s.seatNumber}</span>
-                                          </span>
-                                        )}
-                                        {s.passengerName && (
-                                          <span className="inline-flex items-center gap-1">
-                                            <span>👤</span>
-                                            <span>{s.passengerName}</span>
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                            <div key={s.id} className="relative grid grid-cols-[auto,1fr] gap-4">
+                              <div className="relative flex items-stretch justify-center">
+                                <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-slate-200 dark:bg-slate-700" />
+                                <div className="relative z-10 mt-2 h-3 w-3 rounded-full border-2 border-sky-400 bg-white dark:bg-slate-900" />
                               </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditSegment(s)}
-                                  className="rounded-full px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteSegment(s)}
-                                  className="rounded-full px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
-                                >
-                                  Delete
-                                </button>
+                              <div
+                                className={`group flex items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm ring-1 ring-slate-900/5 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/80 ${accentClass} border-l-4`}
+                              >
+                                <div className="flex flex-1 gap-3">
+                                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-lg dark:bg-slate-700">
+                                    {meta.icon}
+                                  </div>
+                                  <div>
+                                    <div className="mb-1 flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                        {s.title}
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.badgeClass}`}
+                                      >
+                                        {meta.label}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-300">
+                                      {renderTimeRange(s.startTime, s.endTime)}
+                                    </div>
+                                    <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-300">
+                                      {s.type !== 'note' && (s.location || s.provider) && (
+                                        <div>
+                                          {s.location}
+                                          {s.location && s.provider && ' · '}
+                                          {s.provider}
+                                        </div>
+                                      )}
+                                      {s.type !== 'note' && s.confirmationCode && (
+                                        <div className="text-[11px] text-slate-400 dark:text-slate-400">
+                                          Ref: {s.confirmationCode}
+                                        </div>
+                                      )}
+                                      {(s.details &&
+                                        (typeof s.details === 'string'
+                                          ? s.details
+                                          : s.details.activityNotes ?? s.details.notes)) && (
+                                        <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                                          {typeof s.details === 'string'
+                                            ? s.details
+                                            : s.details.activityNotes ?? s.details.notes}
+                                        </div>
+                                      )}
+                                      <div className="mt-1 flex items-start justify-between text-[11px] text-slate-400 dark:text-slate-400">
+                                        <label className="cursor-pointer hover:underline">
+                                          {uploadingAttachmentSegmentId === s.id ? 'Uploading…' : 'Attach file'}
+                                          <input
+                                            type="file"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                              if (!trip || !id || !e.target.files?.[0]) return;
+                                              try {
+                                                setUploadingAttachmentSegmentId(s.id);
+                                                await uploadSegmentAttachment(s.id, e.target.files[0]);
+                                                const fresh = await getTrip(id);
+                                                setTrip(fresh);
+                                              } catch (err) {
+                                                console.error(err);
+                                              } finally {
+                                                setUploadingAttachmentSegmentId(null);
+                                                e.target.value = '';
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                        <div className="ml-2 flex-1 text-right">
+                                          {Array.isArray(s.attachments) && s.attachments.length > 0 && (
+                                            <ul className="space-y-1">
+                                              {s.attachments.map((att: Attachment) => (
+                                                <li
+                                                  key={att.id}
+                                                  className="flex items-center justify-end gap-2"
+                                                >
+                                                  <a
+                                                    href={buildImageUrl(att.path)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="truncate text-[10px] text-blue-600 hover:underline dark:text-blue-400"
+                                                  >
+                                                    {att.originalName}
+                                                  </a>
+                                                  <button
+                                                    type="button"
+                                                    className="text-[10px] text-slate-400 hover:text-red-500"
+                                                    onClick={async () => {
+                                                      if (!id) return;
+                                                      if (!confirm('Delete this attachment?')) return;
+                                                      try {
+                                                        await deleteSegmentAttachment(s.id, att.id);
+                                                        const fresh = await getTrip(id);
+                                                        setTrip(fresh);
+                                                      } catch (err) {
+                                                        console.error(err);
+                                                      }
+                                                    }}
+                                                  >
+                                                    Remove
+                                                  </button>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {(s.flightNumber || s.seatNumber || s.passengerName) && (
+                                        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
+                                          {s.flightNumber && (
+                                            <span className="inline-flex items-center gap-1">
+                                              <span>✈️</span>
+                                              <span>{s.flightNumber}</span>
+                                            </span>
+                                          )}
+                                          {s.seatNumber && (
+                                            <span className="inline-flex items-center gap-1">
+                                              <span>💺</span>
+                                              <span>{s.seatNumber}</span>
+                                            </span>
+                                          )}
+                                          {s.passengerName && (
+                                            <span className="inline-flex items-center gap-1">
+                                              <span>👤</span>
+                                              <span>{s.passengerName}</span>
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditSegment(s)}
+                                    className="rounded-full px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSegment(s)}
+                                    className="rounded-full px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1134,6 +1238,8 @@ async function handleImageChange(e: any) {
                     </div>
                   );
                 })}
+              </div>
+            )}
               </div>
             )}
           </section>
