@@ -297,6 +297,19 @@ export default function TripDetailPage() {
       return;
     }
 
+    const trimmedAddress = (segmentForm.location || '').trim();
+    if (
+      trimmedAddress &&
+      (trimmedAddress.length < 5 ||
+        !/\d/.test(trimmedAddress) ||
+        !/[A-Za-z]/.test(trimmedAddress))
+    ) {
+      setSegmentError(
+        'Please enter a more complete street address (e.g. "123 Main St, Suburb").',
+      );
+      return;
+    }
+
     try {
       setSegmentError(null);
 
@@ -903,7 +916,7 @@ async function handleImageChange(e: any) {
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Location
+                  Address
                 </label>
                 <input
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
@@ -1107,10 +1120,33 @@ async function handleImageChange(e: any) {
                                     </div>
                                     <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-300">
                                       {s.type !== 'note' && (s.location || s.provider) && (
-                                        <div>
-                                          {s.location}
-                                          {s.location && s.provider && ' · '}
-                                          {s.provider}
+                                        <div className="flex items-center gap-1">
+                                          <div className="truncate">
+                                            {s.location}
+                                            {s.location && s.provider && ' · '}
+                                            {s.provider}
+                                          </div>
+                                          {s.location && (
+                                            <a
+                                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                                s.location ?? '',
+                                              )}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center rounded-full border border-slate-300 px-1.5 py-0.5 text-[10px] hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+                                              title="Open in Google Maps"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 24 24"
+                                                className="h-3 w-3"
+                                                aria-hidden="true"
+                                              >
+                                                <path d="M12 2.5a6 6 0 0 0-6 6c0 4.16 5.1 9.36 5.32 9.58.37.36.99.36 1.36 0C12.9 17.86 18 12.66 18 8.5a6 6 0 0 0-6-6zm0 8.25a2.25 2.25 0 1 1 0-4.5 2.25 2.25 0 0 1 0 4.5z" />
+                                              </svg>
+                                            </a>
+                                          )}
                                         </div>
                                       )}
                                       {s.type !== 'note' && s.confirmationCode && (
