@@ -916,7 +916,7 @@ async function handleImageChange(e: any) {
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Address
+                  Location
                 </label>
                 <input
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
