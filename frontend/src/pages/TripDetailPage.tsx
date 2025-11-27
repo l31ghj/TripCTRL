@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getTrip, Trip, Segment, Attachment, SegmentDetails } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
@@ -145,6 +145,7 @@ export default function TripDetailPage() {
   const [segmentError, setSegmentError] = useState<string | null>(null);
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
   const [showSegmentForm, setShowSegmentForm] = useState(false);
+  const segmentFormRef = useRef<HTMLDivElement | null>(null);
   const [uploadingAttachmentTrip, setUploadingAttachmentTrip] = useState(false);
   const [uploadingAttachmentSegmentId, setUploadingAttachmentSegmentId] =
     useState<string | null>(null);
@@ -543,7 +544,7 @@ async function handleImageChange(e: any) {
                     )}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                                <div className="flex flex-col items-end gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
                     <span>{uploadingImage ? 'Uploading…' : 'Change cover'}</span>
                     <input
@@ -556,12 +557,27 @@ async function handleImageChange(e: any) {
                   </label>
                   <button
                     type="button"
+                    onClick={() => {
+                      setShowSegmentForm(true);
+                      setTimeout(() => {
+                        segmentFormRef.current?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        });
+                      }, 50);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-400"
+                  >
+                    + Add segment
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setTripFormOpen(true)}
                     className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20"
                   >
                     ✏️ Edit details
                   </button>
-                </div>
+                </div></div>
               </div>
               {trip.notes && (
                 <p className="max-w-2xl text-xs text-slate-100/90">
@@ -958,7 +974,9 @@ async function handleImageChange(e: any) {
 
         <section className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           {/* Segment form */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <section
+            ref={segmentFormRef}
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
             
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
