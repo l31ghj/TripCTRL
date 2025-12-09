@@ -23,10 +23,11 @@ async function bootstrap() {
     }),
   );
 
-  const uploadsDir = join(process.cwd(), 'uploads', 'trips');
-  fs.mkdirSync(uploadsDir, { recursive: true });
+  const uploadsRoot = join(process.cwd(), 'uploads');
+  fs.mkdirSync(join(uploadsRoot, 'trips'), { recursive: true });
+  fs.mkdirSync(join(uploadsRoot, 'attachments'), { recursive: true });
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  app.useStaticAssets(uploadsRoot, {
     prefix: '/uploads',
   });
 

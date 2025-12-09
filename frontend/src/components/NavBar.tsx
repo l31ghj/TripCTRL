@@ -8,8 +8,7 @@ function getInitialTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
   const saved = window.localStorage.getItem('tripctrl-theme');
   if (saved === 'light' || saved === 'dark') return saved;
-  if (window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     return 'dark';
   }
   return 'light';
@@ -75,7 +74,7 @@ export function NavBar() {
             aria-label="Toggle dark mode"
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {isDark ? '🌙' : '☀️'}
+            {isDark ? '☀' : '🌙'}
           </button>
           {email && (
             <span className="hidden text-xs text-slate-600 dark:text-slate-300 md:inline">

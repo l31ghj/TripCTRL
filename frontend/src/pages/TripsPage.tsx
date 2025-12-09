@@ -132,7 +132,7 @@ export function TripsPage() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-                  placeholder="Japan adventure, Europe 2026, Work trip to Sydney…"
+                  placeholder="Japan adventure, Europe 2026, Work trip to Sydney..."
                 />
               </div>
               <div>
@@ -143,7 +143,7 @@ export function TripsPage() {
                   value={newLocation}
                   onChange={(e) => setNewLocation(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-                  placeholder="Tokyo, London, New York…"
+                  placeholder="Tokyo, London, New York..."
                 />
               </div>
               <div>
@@ -202,7 +202,7 @@ export function TripsPage() {
 
           {loading && (
             <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-6 text-sm text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800/80">
-              Loading trips…
+              Loading trips...
             </div>
           )}
 
@@ -291,7 +291,7 @@ export function TripsPage() {
                           <div className="mt-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                             <div>
                               <div>
-                                {start.toLocaleDateString()} – {end.toLocaleDateString()}
+                                {start.toLocaleDateString()} - {end.toLocaleDateString()}
                               </div>
                             </div>
                             <span className="text-[11px] text-slate-400 dark:text-slate-500">
@@ -373,7 +373,7 @@ export function TripsPage() {
                               <div className="mt-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                                 <div>
                                   <div>
-                                    {start.toLocaleDateString()} – {end.toLocaleDateString()}
+                                    {start.toLocaleDateString()} - {end.toLocaleDateString()}
                                   </div>
                                 </div>
                                 <span className="text-[11px] text-slate-400 dark:text-slate-500">

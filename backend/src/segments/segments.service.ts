@@ -2,10 +2,38 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateSegmentDto } from './dto/create-segment.dto';
 import { UpdateSegmentDto } from './dto/update-segment.dto';
+import { join } from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class SegmentsService {
   constructor(private prisma: PrismaService) {}
+
+  private async getTripWithDetails(tripId: string, userId: string) {
+    return this.prisma.trip.findFirst({
+      where: { id: tripId, userId },
+      include: {
+        segments: {
+          orderBy: { startTime: 'asc' },
+          include: { attachments: true },
+        },
+        attachments: true,
+      },
+    });
+  }
+
+  private removeFileIfExists(path: string | null | undefined) {
+    if (!path) return;
+    const cleaned = path.replace(/^\/+/, '');
+    const abs = join(process.cwd(), cleaned);
+    try {
+      if (fs.existsSync(abs)) {
+        fs.unlinkSync(abs);
+      }
+    } catch {
+      // best-effort cleanup only
+    }
+  }
 
   async createSegment(userId: string, tripId: string, dto: CreateSegmentDto) {
     const trip = await this.prisma.trip.findFirst({
@@ -32,10 +60,7 @@ export class SegmentsService {
       },
     });
 
-    return this.prisma.trip.findFirst({
-      where: { id: tripId, userId },
-      include: { segments: { orderBy: { startTime: 'asc' } } },
-    });
+    return this.getTripWithDetails(tripId, userId);
   }
 
   async updateSegment(userId: string, segmentId: string, dto: UpdateSegmentDto) {
@@ -66,10 +91,7 @@ export class SegmentsService {
       },
     });
 
-    return this.prisma.trip.findFirst({
-      where: { id: segment.tripId, userId },
-      include: { segments: { orderBy: { startTime: 'asc' } } },
-    });
+    return this.getTripWithDetails(segment.tripId, userId);
   }
 
 
@@ -119,6 +141,8 @@ export class SegmentsService {
       throw new NotFoundException('Attachment not found');
     }
 
+    this.removeFileIfExists(attachment.path);
+
     await this.prisma.attachment.delete({ where: { id: attachmentId } });
     return { success: true };
   }
@@ -131,6 +155,17 @@ export class SegmentsService {
     if (!segment || segment.trip.userId !== userId) {
       throw new NotFoundException('Segment not found');
     }
-    return this.prisma.segment.delete({ where: { id: segmentId } });
+
+    const attachments = await this.prisma.attachment.findMany({
+      where: { segmentId },
+    });
+    attachments.forEach((att) => this.removeFileIfExists(att.path));
+
+    await this.prisma.$transaction([
+      this.prisma.attachment.deleteMany({ where: { segmentId } }),
+      this.prisma.segment.delete({ where: { id: segmentId } }),
+    ]);
+
+    return { success: true };
   }
 }

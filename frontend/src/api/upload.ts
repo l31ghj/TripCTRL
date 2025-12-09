@@ -24,7 +24,7 @@ export async function uploadTripImage(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
+    throw new Error(`${res.status} - ${text}`);
   }
 
   return res.json();

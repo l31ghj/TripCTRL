@@ -2,10 +2,25 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { join } from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class TripsService {
   constructor(private prisma: PrismaService) {}
+
+  private removeFileIfExists(path: string | null | undefined) {
+    if (!path) return;
+    const cleaned = path.replace(/^\/+/, '');
+    const abs = join(process.cwd(), cleaned);
+    try {
+      if (fs.existsSync(abs)) {
+        fs.unlinkSync(abs);
+      }
+    } catch {
+      // Best-effort cleanup; ignore filesystem errors
+    }
+  }
 
   listTrips(userId: string) {
     return this.prisma.trip.findMany({
@@ -105,13 +120,30 @@ export class TripsService {
       throw new NotFoundException('Attachment not found');
     }
 
+    this.removeFileIfExists(attachment.path);
     await this.prisma.attachment.delete({ where: { id: attachmentId } });
     return { success: true };
   }
 
   async deleteTrip(userId: string, tripId: string) {
     await this.getTrip(userId, tripId);
-    await this.prisma.segment.deleteMany({ where: { tripId } });
-    return this.prisma.trip.delete({ where: { id: tripId } });
+
+    const attachments = await this.prisma.attachment.findMany({
+      where: {
+        OR: [{ tripId }, { segment: { tripId } }],
+      },
+    });
+
+    attachments.forEach((att) => this.removeFileIfExists(att.path));
+
+    await this.prisma.$transaction([
+      this.prisma.attachment.deleteMany({
+        where: { OR: [{ tripId }, { segment: { tripId } }] },
+      }),
+      this.prisma.segment.deleteMany({ where: { tripId } }),
+      this.prisma.trip.delete({ where: { id: tripId } }),
+    ]);
+
+    return { success: true };
   }
 }

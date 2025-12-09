@@ -1,4 +1,5 @@
 import { API_BASE } from './client';
+
 function getAuthHeaders() {
   const token = localStorage.getItem('accessToken');
   return token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -19,7 +20,7 @@ export async function uploadTripAttachment(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
+    throw new Error(`${res.status} - ${text}`);
   }
 
   return res.json();
@@ -40,12 +41,11 @@ export async function uploadSegmentAttachment(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
+    throw new Error(`${res.status} - ${text}`);
   }
 
   return res.json();
 }
-
 
 export async function deleteTripAttachment(
   tripId: string,
@@ -57,7 +57,7 @@ export async function deleteTripAttachment(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
+    throw new Error(`${res.status} - ${text}`);
   }
 }
 
@@ -65,15 +65,12 @@ export async function deleteSegmentAttachment(
   segmentId: string,
   attachmentId: string,
 ): Promise<void> {
-  const res = await fetch(
-    `${API_BASE}/segments/${segmentId}/attachments/${attachmentId}`,
-    {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    },
-  );
+  const res = await fetch(`${API_BASE}/segments/${segmentId}/attachments/${attachmentId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} – ${text}`);
+    throw new Error(`${res.status} - ${text}`);
   }
 }

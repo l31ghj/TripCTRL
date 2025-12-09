@@ -88,7 +88,7 @@ function renderTimeRange(start: string, end?: string | null) {
     });
 
   if (!endDate) return fmtTime(startDate);
-  return `${fmtTime(startDate)} – ${fmtTime(endDate)}`;
+  return `${fmtTime(startDate)} - ${fmtTime(endDate)}`;
 }
 
 function getSegmentMeta(type: string) {
@@ -429,7 +429,7 @@ async function handleImageChange(e: any) {
         <NavBar />
         <main className="mx-auto flex max-w-5xl flex-1 items-center justify-center px-4">
           <p className="text-sm text-slate-500 dark:text-slate-300">
-            Loading trip…
+            Loading trip...
           </p>
         </main>
       </div>
@@ -531,7 +531,7 @@ async function handleImageChange(e: any) {
                     <span className="inline-flex items-center gap-1">
                       <span>🗓</span>
                       <span>
-                        {new Date(trip.startDate).toLocaleDateString()} –{' '}
+                        {new Date(trip.startDate).toLocaleDateString()} -{' '}
                         {new Date(trip.endDate).toLocaleDateString()}
                       </span>
                     </span>
@@ -546,7 +546,7 @@ async function handleImageChange(e: any) {
                 
                 <div className="flex flex-col items-end gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
-                    <span>{uploadingImage ? 'Uploading…' : 'Change cover'}</span>
+                    <span>{uploadingImage ? 'Uploading...' : 'Change cover'}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -806,7 +806,7 @@ async function handleImageChange(e: any) {
               Attachments
             </h3>
             <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              {uploadingAttachmentTrip ? 'Uploading…' : 'Attach file'}
+              {uploadingAttachmentTrip ? 'Uploading...' : 'Attach file'}
               <input
                 type="file"
                 className="hidden"
@@ -1333,7 +1333,7 @@ async function handleImageChange(e: any) {
                                       )}
                                       <div className="mt-1 flex items-start justify-between text-[11px] text-slate-400 dark:text-slate-400">
                                         <label className="cursor-pointer hover:underline">
-                                          {uploadingAttachmentSegmentId === s.id ? 'Uploading…' : 'Attach file'}
+                                          {uploadingAttachmentSegmentId === s.id ? 'Uploading...' : 'Attach file'}
                                           <input
                                             type="file"
                                             className="hidden"
