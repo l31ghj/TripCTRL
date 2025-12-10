@@ -287,8 +287,12 @@ export default function TripDetailPage() {
 
   function addPlanningItem(list: keyof PlanningData, text: string) {
     if (!text.trim()) return;
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const newItem: ChecklistItem = {
-      id: crypto.randomUUID(),
+      id,
       text: text.trim(),
       done: false,
     };
