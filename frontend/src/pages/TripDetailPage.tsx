@@ -48,6 +48,13 @@ const emptyTripForm: TripFormState = {
   notes: '',
 };
 
+type ChecklistItem = { id: string; text: string; done: boolean };
+type PlanningData = {
+  packing: ChecklistItem[];
+  ideas: ChecklistItem[];
+  tasks: ChecklistItem[];
+};
+
 const emptySegmentForm: SegmentFormState = {
   type: 'transport',
   transportMode: 'flight',
@@ -154,7 +161,13 @@ export default function TripDetailPage() {
   const [tripFormError, setTripFormError] = useState<string | null>(null);
 
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'attachments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'attachments' | 'planning'>('overview');
+  const [planning, setPlanning] = useState<PlanningData>({
+    packing: [],
+    ideas: [],
+    tasks: [],
+  });
+  const [planningLoaded, setPlanningLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -181,6 +194,36 @@ export default function TripDetailPage() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    try {
+      const raw = localStorage.getItem(`trip_planning_${id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          parsed &&
+          Array.isArray(parsed.packing) &&
+          Array.isArray(parsed.ideas) &&
+          Array.isArray(parsed.tasks)
+        ) {
+          setPlanning(parsed);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load planning data', err);
+    }
+    setPlanningLoaded(true);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !planningLoaded) return;
+    try {
+      localStorage.setItem(`trip_planning_${id}`, JSON.stringify(planning));
+    } catch (err) {
+      console.error('Failed to persist planning data', err);
+    }
+  }, [planning, id, planningLoaded]);
 
   const sortedSegments = useMemo(() => {
     if (!trip?.segments) return [];
@@ -240,6 +283,35 @@ export default function TripDetailPage() {
   function closeSegmentForm() {
     resetSegmentForm();
     setShowSegmentForm(false);
+  }
+
+  function addPlanningItem(list: keyof PlanningData, text: string) {
+    if (!text.trim()) return;
+    const newItem: ChecklistItem = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      done: false,
+    };
+    setPlanning((prev) => ({
+      ...prev,
+      [list]: [...prev[list], newItem],
+    }));
+  }
+
+  function togglePlanningItem(list: keyof PlanningData, itemId: string) {
+    setPlanning((prev) => ({
+      ...prev,
+      [list]: prev[list].map((item) =>
+        item.id === itemId ? { ...item, done: !item.done } : item,
+      ),
+    }));
+  }
+
+  function removePlanningItem(list: keyof PlanningData, itemId: string) {
+    setPlanning((prev) => ({
+      ...prev,
+      [list]: prev[list].filter((item) => item.id !== itemId),
+    }));
   }
 
   function handleTripFieldChange<K extends keyof TripFormState>(
@@ -624,6 +696,17 @@ async function handleImageChange(e: any) {
             >
               Attachments
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('planning')}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                activeTab === 'planning'
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
+              }`}
+            >
+              Planning
+            </button>
           </div>
         </section>
 
@@ -985,7 +1068,95 @@ async function handleImageChange(e: any) {
           </div>
         )}
 
-        {activeTab !== 'attachments' && (
+        {activeTab === 'planning' && (
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  Planning
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Keep packing lists, ideas, and pre-trip tasks in one place. Saved to this browser.
+                </p>
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Trip: {trip.title}
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {(['packing', 'ideas', 'tasks'] as Array<keyof PlanningData>).map((key) => {
+                const heading =
+                  key === 'packing'
+                    ? 'Packing list'
+                    : key === 'ideas'
+                    ? 'Ideas'
+                    : 'Pre-trip tasks';
+                const placeholder =
+                  key === 'packing'
+                    ? 'Add an item to pack'
+                    : key === 'ideas'
+                    ? 'Add an activity/accommodation/dining idea'
+                    : 'Add a task to complete';
+
+                return (
+                  <div
+                    key={key}
+                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {heading}
+                      </h4>
+                      <span className="text-[11px] text-slate-400">
+                        {planning[key].filter((i) => i.done).length}/{planning[key].length} done
+                      </span>
+                    </div>
+                    <PlanningInput
+                      placeholder={placeholder}
+                      onAdd={(text) => addPlanningItem(key, text)}
+                    />
+                    {planning[key].length === 0 ? (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Nothing here yet.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {planning[key].map((item) => (
+                          <li
+                            key={item.id}
+                            className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800/70"
+                          >
+                            <label className="flex flex-1 cursor-pointer items-start gap-2">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={item.done}
+                                onChange={() => togglePlanningItem(key, item.id)}
+                              />
+                              <span className={item.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}>
+                                {item.text}
+                              </span>
+                            </label>
+                            <button
+                              type="button"
+                              className="text-[11px] text-slate-400 hover:text-red-500"
+                              onClick={() => removePlanningItem(key, item.id)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'itinerary' && (
           <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -1467,5 +1638,34 @@ async function handleImageChange(e: any) {
         )}
       </main>
     </div>
+  );
+}
+
+
+function PlanningInput({ placeholder, onAdd }: { placeholder: string; onAdd: (text: string) => void }) {
+  const [value, setValue] = React.useState('');
+
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onAdd(value);
+        setValue('');
+      }}
+    >
+      <input
+        className="h-9 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+      />
+      <button
+        type="submit"
+        className="rounded-full bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+      >
+        Add
+      </button>
+    </form>
   );
 }
