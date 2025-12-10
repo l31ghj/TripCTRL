@@ -167,6 +167,11 @@ export default function TripDetailPage() {
     ideas: [],
     tasks: [],
   });
+  const [planningCollapsed, setPlanningCollapsed] = useState<Record<keyof PlanningData, boolean>>({
+    packing: true,
+    ideas: true,
+    tasks: true,
+  });
   const [planningLoaded, setPlanningLoaded] = useState(false);
 
   useEffect(() => {
@@ -300,6 +305,7 @@ export default function TripDetailPage() {
       ...prev,
       [list]: [...prev[list], newItem],
     }));
+    setPlanningCollapsed((prev) => ({ ...prev, [list]: false }));
   }
 
   function togglePlanningItem(list: keyof PlanningData, itemId: string) {
@@ -316,6 +322,10 @@ export default function TripDetailPage() {
       ...prev,
       [list]: prev[list].filter((item) => item.id !== itemId),
     }));
+  }
+
+  function togglePlanningCollapse(list: keyof PlanningData) {
+    setPlanningCollapsed((prev) => ({ ...prev, [list]: !prev[list] }));
   }
 
   function handleTripFieldChange<K extends keyof TripFormState>(
@@ -1102,56 +1112,67 @@ async function handleImageChange(e: any) {
                     : key === 'ideas'
                     ? 'Add an activity/accommodation/dining idea'
                     : 'Add a task to complete';
+                const collapsed = planningCollapsed[key];
+                const doneCount = planning[key].filter((i) => i.done).length;
+                const totalCount = planning[key].length;
 
                 return (
                   <div
                     key={key}
                     className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
                   >
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        {heading}
-                      </h4>
-                      <span className="text-[11px] text-slate-400">
-                        {planning[key].filter((i) => i.done).length}/{planning[key].length} done
+                    <button
+                      type="button"
+                      onClick={() => togglePlanningCollapse(key)}
+                      className="flex items-center justify-between rounded-lg bg-slate-100 px-2 py-1 text-left text-sm font-semibold text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                    >
+                      <span>{heading}</span>
+                      <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                        <span>{totalCount} item{totalCount === 1 ? '' : 's'} ({doneCount} done)</span>
+                        <span>{collapsed ? '▸' : '▾'}</span>
                       </span>
-                    </div>
-                    <PlanningInput
-                      placeholder={placeholder}
-                      onAdd={(text) => addPlanningItem(key, text)}
-                    />
-                    {planning[key].length === 0 ? (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Nothing here yet.
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {planning[key].map((item) => (
-                          <li
-                            key={item.id}
-                            className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800/70"
-                          >
-                            <label className="flex flex-1 cursor-pointer items-start gap-2">
-                              <input
-                                type="checkbox"
-                                className="mt-0.5"
-                                checked={item.done}
-                                onChange={() => togglePlanningItem(key, item.id)}
-                              />
-                              <span className={item.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}>
-                                {item.text}
-                              </span>
-                            </label>
-                            <button
-                              type="button"
-                              className="text-[11px] text-slate-400 hover:text-red-500"
-                              onClick={() => removePlanningItem(key, item.id)}
-                            >
-                              Remove
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                    </button>
+
+                    {!collapsed && (
+                      <>
+                        <PlanningInput
+                          placeholder={placeholder}
+                          onAdd={(text) => addPlanningItem(key, text)}
+                        />
+                        {planning[key].length === 0 ? (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Nothing here yet.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {planning[key].map((item) => (
+                              <li
+                                key={item.id}
+                                className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800/70"
+                              >
+                                <label className="flex flex-1 cursor-pointer items-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-0.5"
+                                    checked={item.done}
+                                    onChange={() => togglePlanningItem(key, item.id)}
+                                  />
+                                  <span className={item.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}>
+                                    {item.text}
+                                  </span>
+                                </label>
+                                <button
+                                  type="button"
+                                  className="text-[11px] text-slate-400 hover:text-red-500"
+                                  onClick={() => removePlanningItem(key, item.id)}
+                                >
+                                  Remove
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     )}
                   </div>
                 );
