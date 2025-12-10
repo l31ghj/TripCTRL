@@ -632,7 +632,16 @@ async function handleImageChange(e: any) {
           <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-700 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200">
             <div className="flex items-center gap-2">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                ?Y??
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4 text-slate-700 dark:text-slate-200"
+                  aria-hidden="true"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M5 7.5h14M5 12h14M5 16.5h9" strokeLinecap="round" />
+                </svg>
               </span>
               <div className="flex flex-col">
                 <span className="font-semibold">
@@ -646,7 +655,14 @@ async function handleImageChange(e: any) {
             {tripNights !== null && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                  ?YOT
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 text-slate-700 dark:text-slate-200"
+                    aria-hidden="true"
+                    fill="currentColor"
+                  >
+                    <path d="M17.25 3.5A7.75 7.75 0 1 0 20.5 15a.75.75 0 0 0-1.06-.28 5.25 5.25 0 0 1-5.9-8.64.75.75 0 0 0 .21-.92 7.74 7.74 0 0 0-1.26-1.66Z" />
+                  </svg>
                 </span>
                 <div className="flex flex-col">
                   <span className="font-semibold">
@@ -661,7 +677,16 @@ async function handleImageChange(e: any) {
             {nextSegment && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                  ???
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 text-slate-700 dark:text-slate-200"
+                    aria-hidden="true"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M12 6v6h4.5M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </span>
                 <div className="flex flex-col">
                   <span className="font-semibold">
