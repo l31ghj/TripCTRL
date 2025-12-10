@@ -216,10 +216,10 @@ export default function TripDetailPage() {
           Array.isArray(parsed.tasks)
         ) {
           setPlanning({
-            packing: parsed.packing ? [],
-            ideas: parsed.ideas ? [],
-            tasks: parsed.tasks ? [],
-            notes: parsed.notes ? '',
+            packing: parsed.packing ?? [],
+            ideas: parsed.ideas ?? [],
+            tasks: parsed.tasks ?? [],
+            notes: parsed.notes ?? '',
           });
         }
       }
