@@ -55,6 +55,12 @@ type PlanningData = {
   tasks: ChecklistItem[];
   notes: string;
 };
+type ParsedEmailSegment = {
+  title: string;
+  startTime?: string | null;
+  location?: string;
+  raw: string;
+};
 
 const emptySegmentForm: SegmentFormState = {
   type: 'transport',
@@ -175,6 +181,10 @@ export default function TripDetailPage() {
     tasks: true,
     notes: true,
   });
+  const [emailPaste, setEmailPaste] = useState('');
+  const [parsedEmailSegments, setParsedEmailSegments] = useState<ParsedEmailSegment[]>([]);
+  const [parsingEmailError, setParsingEmailError] = useState<string | null>(null);
+  const [creatingFromEmail, setCreatingFromEmail] = useState(false);
   const [planningLoaded, setPlanningLoaded] = useState(false);
 
   useEffect(() => {
@@ -347,6 +357,78 @@ export default function TripDetailPage() {
         {text}
       </p>
     );
+  }
+
+  function parseEmailSegments(text: string): ParsedEmailSegment[] {
+    const segments: ParsedEmailSegment[] = [];
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const dateRe = /(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/;
+    const timeRe = /(\d{1,2}:\d{2})(?:\s?(AM|PM|am|pm))?/;
+
+    for (const line of lines) {
+      const dateMatch = line.match(dateRe);
+      const timeMatch = line.match(timeRe);
+      const atMatch = line.match(/(?:@| at )(.+)/i);
+
+      const title = line
+        .replace(dateRe, '')
+        .replace(timeRe, '')
+        .replace(/@.*/, '')
+        .replace(/ at .*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      let startTime: string | null = null;
+      if (dateMatch && timeMatch) {
+        const datePart = dateMatch[1];
+        const timePart = timeMatch[1];
+        const ampm = timeMatch[2] ?? '';
+        const isoInput = `${datePart} ${timePart} ${ampm}`.trim();
+        const parsed = new Date(isoInput);
+        if (!Number.isNaN(parsed.getTime())) {
+          startTime = parsed.toISOString();
+        }
+      }
+
+      segments.push({
+        title: title || line.slice(0, 80),
+        startTime,
+        location: atMatch ? atMatch[1].trim() : undefined,
+        raw: line,
+      });
+    }
+    return segments;
+  }
+
+  async function handleParseEmail() {
+    try {
+      setParsingEmailError(null);
+      const parsed = parseEmailSegments(emailPaste);
+      setParsedEmailSegments(parsed);
+      setPlanningCollapsed((prev) => ({ ...prev, tasks: true, ideas: true, packing: true, notes: true }));
+    } catch (err: any) {
+      setParsingEmailError('Could not parse email. Please try again.');
+    }
+  }
+
+  async function handleCreateSegmentFromEmail(seg: ParsedEmailSegment) {
+    if (!id) return;
+    try {
+      setCreatingFromEmail(true);
+      const payload: any = {
+        type: 'activity',
+        title: seg.title || 'New segment',
+        startTime: seg.startTime,
+        location: seg.location,
+      };
+      const updated = await createSegment(id, payload);
+      setTrip(updated);
+    } catch (err) {
+      console.error(err);
+      alert('Could not create segment from email.');
+    } finally {
+      setCreatingFromEmail(false);
+    }
   }
 
 
@@ -1224,6 +1306,63 @@ async function handleImageChange(e: any) {
                     onChange={(e) => handleNotesChange(e.target.value)}
                     placeholder="Quick notes, ideas, or reminders"
                   />
+                </div>
+              )}
+            </div>
+            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+              <h4 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Paste email to create segments
+              </h4>
+              <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
+                Paste confirmation or booking emails. We will attempt to pick out titles, dates, times, and locations. Review before adding.
+              </p>
+              <textarea
+                className="h-32 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                value={emailPaste}
+                onChange={(e) => setEmailPaste(e.target.value)}
+                placeholder="Paste email text here"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleParseEmail}
+                  className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+                >
+                  Parse email
+                </button>
+                {parsingEmailError && (
+                  <span className="text-[11px] text-red-500">{parsingEmailError}</span>
+                )}
+              </div>
+              {parsedEmailSegments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {parsedEmailSegments.map((seg, idx) => (
+                    <div
+                      key={`${seg.title}-${idx}`}
+                      className="rounded-lg border border-slate-200 bg-white/80 p-2 text-[11px] shadow-sm dark:border-slate-700 dark:bg-slate-800/80"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-slate-800 dark:text-slate-100">
+                          {seg.title || 'Untitled'}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={creatingFromEmail}
+                          onClick={() => handleCreateSegmentFromEmail(seg)}
+                          className="rounded-full bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
+                        >
+                          {creatingFromEmail ? 'Adding...' : 'Add segment'}
+                        </button>
+                      </div>
+                      <div className="mt-1 text-slate-500 dark:text-slate-300">
+                        {seg.startTime ? new Date(seg.startTime).toLocaleString() : 'No time detected'}
+                      </div>
+                      {seg.location && (
+                        <div className="text-slate-500 dark:text-slate-300">Location: {seg.location}</div>
+                      )}
+                      <div className="mt-1 text-slate-400 dark:text-slate-400">Source: {seg.raw}</div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
