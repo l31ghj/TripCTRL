@@ -350,6 +350,48 @@ export default function TripDetailPage() {
     setPlanning((prev) => ({ ...prev, notes: value }));
   }
 
+  function toIsoFromParts(datePart: string, timePart?: string, ampm?: string | null): string | null {
+    if (!datePart) return null;
+    let year: number | null = null;
+    let month: number | null = null;
+    let day: number | null = null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      const [y, m, d] = datePart.split('-').map(Number);
+      year = y;
+      month = m;
+      day = d;
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(datePart)) {
+      const [a, b, c] = datePart.split('/').map(Number);
+      // If first part > 12, assume DD/MM/YYYY; otherwise assume MM/DD/YYYY
+      if (a > 12) {
+        day = a;
+        month = b;
+      } else {
+        month = a;
+        day = b;
+      }
+      year = c < 100 ? 2000 + c : c;
+    }
+
+    if (!year || !month || !day) return null;
+
+    let hours = 12;
+    let minutes = 0;
+    if (timePart) {
+      const [hStr, mStr] = timePart.split(':');
+      hours = Number(hStr);
+      minutes = Number(mStr ?? '0');
+      const isPm = ampm ? ampm.toLowerCase() === 'pm' : false;
+      if (isPm && hours < 12) hours += 12;
+      if (!isPm && hours === 12) hours = 0;
+    }
+
+    const date = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+    if (!Number.isFinite(date.getTime())) return null;
+    return date.toISOString();
+  }
+
   function renderNotesContent(text: string) {
     if (!text.trim()) return null;
     return (
@@ -370,29 +412,23 @@ export default function TripDetailPage() {
       const timeMatch = line.match(timeRe);
       const atMatch = line.match(/(?:@| at )(.+)/i);
 
-      const title = line
+      const cleaned = line
         .replace(dateRe, '')
         .replace(timeRe, '')
         .replace(/@.*/, '')
         .replace(/ at .*/i, '')
         .replace(/\s+/g, ' ')
         .trim();
+      const title = cleaned || line.slice(0, 80);
 
-      let startTime: string | null = null;
-      if (dateMatch && timeMatch) {
-        const datePart = dateMatch[1];
-        const timePart = timeMatch[1];
-        const ampm = timeMatch[2] ?? '';
-        const isoInput = `${datePart} ${timePart} ${ampm}`.trim();
-        const parsed = new Date(isoInput);
-        if (!Number.isNaN(parsed.getTime())) {
-          startTime = parsed.toISOString();
-        }
-      }
+      const datePart = dateMatch?.[1] ?? '';
+      const timePart = timeMatch?.[1];
+      const ampm = timeMatch?.[2] ?? null;
+      const startTime = datePart ? toIsoFromParts(datePart, timePart, ampm) : null;
 
       segments.push({
         title: title || line.slice(0, 80),
-        startTime,
+        startTime: startTime ?? undefined,
         location: atMatch ? atMatch[1].trim() : undefined,
         raw: line,
       });
@@ -418,9 +454,9 @@ export default function TripDetailPage() {
       const payload: any = {
         type: 'activity',
         title: seg.title || 'New segment',
-        startTime: seg.startTime,
-        location: seg.location,
       };
+      if (seg.startTime) payload.startTime = seg.startTime;
+      if (seg.location) payload.location = seg.location;
       const updated = await createSegment(id, payload);
       setTrip(updated);
     } catch (err) {
