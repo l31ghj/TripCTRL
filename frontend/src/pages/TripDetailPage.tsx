@@ -1348,11 +1348,11 @@ async function handleImageChange(e: any) {
                                       {(s.details &&
                                         (typeof s.details === 'string'
                                           ? s.details
-                                          : s.details.activityNotes ? s.details.notes)) && (
+                                          : s.details.activityNotes ?? s.details.notes)) && (
                                         <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
                                           {typeof s.details === 'string'
                                             ? s.details
-                                            : s.details.activityNotes ? s.details.notes}
+                                            : s.details.activityNotes ?? s.details.notes}
                                         </div>
                                       )}
                                       <div className="mt-1 flex items-start justify-between text-[11px] text-slate-400 dark:text-slate-400">
