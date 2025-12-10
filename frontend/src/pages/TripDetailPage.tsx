@@ -279,7 +279,7 @@ export default function TripDetailPage() {
         return s;
       }
     }
-    return sortedSegments[sortedSegments.length - 1] ?? null;
+    return sortedSegments[sortedSegments.length - 1] ? null;
   }, [sortedSegments]);
 
   function resetSegmentForm() {
@@ -489,15 +489,15 @@ export default function TripDetailPage() {
           : seg.type === 'flight'
           ? 'flight'
           : '',
-      title: seg.title ? '',
+      title: seg.title ?? '',
       startTime: toLocalInputValue(seg.startTime),
       endTime: seg.endTime ? toLocalInputValue(seg.endTime) : '',
-      location: seg.location ? '',
-      provider: seg.provider ? '',
-      confirmationCode: seg.confirmationCode ? '',
-      flightNumber: seg.flightNumber ? '',
-      seatNumber: seg.seatNumber ? '',
-      passengerName: seg.passengerName ? '',
+      location: seg.location ?? '',
+      provider: seg.provider ?? '',
+      confirmationCode: seg.confirmationCode ?? '',
+      flightNumber: seg.flightNumber ?? '',
+      seatNumber: seg.seatNumber ?? '',
+      passengerName: seg.passengerName ?? '',
       activityNotes:
         typeof (seg as any).details === 'string'
           ? (seg as any).details
@@ -867,7 +867,7 @@ async function handleImageChange(e: any) {
                                 onClick={() => {
                                   window.open(
                                     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                      s.location ? '',
+                                      s.location ?? '',
                                     )}`,
                                     '_blank',
                                   );
@@ -915,7 +915,7 @@ async function handleImageChange(e: any) {
                           onClick={() => {
                             window.open(
                               `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                nextSegment.location ? '',
+                                nextSegment.location ?? '',
                               )}`,
                               '_blank',
                             );
@@ -1319,7 +1319,7 @@ async function handleImageChange(e: any) {
                                           {s.location && (
                                             <a
                                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                                s.location ? '',
+                                                s.location ?? '',
                                               )}`}
                                               target="_blank"
                                               rel="noopener noreferrer"
