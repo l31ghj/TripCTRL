@@ -214,11 +214,6 @@ export default function TripDetailPage() {
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
   }, [trip]);
 
-  const tripAttachmentCount = useMemo(() => {
-    if (!trip || !Array.isArray(trip.attachments)) return 0;
-    return trip.attachments.length;
-  }, [trip]);
-
   const nextSegment = useMemo(() => {
     if (!sortedSegments.length) return null;
     const now = Date.now();
@@ -637,7 +632,7 @@ async function handleImageChange(e: any) {
           <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-700 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200">
             <div className="flex items-center gap-2">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                🧩
+                ?Y??
               </span>
               <div className="flex flex-col">
                 <span className="font-semibold">
@@ -651,7 +646,7 @@ async function handleImageChange(e: any) {
             {tripNights !== null && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                  🌙
+                  ?YOT
                 </span>
                 <div className="flex flex-col">
                   <span className="font-semibold">
@@ -663,23 +658,10 @@ async function handleImageChange(e: any) {
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                📎
-              </span>
-              <div className="flex flex-col">
-                <span className="font-semibold">
-                  {tripAttachmentCount} attachment{tripAttachmentCount === 1 ? '' : 's'}
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Linked to this trip
-                </span>
-              </div>
-            </div>
             {nextSegment && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 text-sm dark:bg-slate-800">
-                  ⏭
+                  ???
                 </span>
                 <div className="flex flex-col">
                   <span className="font-semibold">
