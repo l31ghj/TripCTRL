@@ -53,6 +53,7 @@ type PlanningData = {
   packing: ChecklistItem[];
   ideas: ChecklistItem[];
   tasks: ChecklistItem[];
+  notes: string;
 };
 
 const emptySegmentForm: SegmentFormState = {
@@ -166,11 +167,13 @@ export default function TripDetailPage() {
     packing: [],
     ideas: [],
     tasks: [],
+    notes: '',
   });
   const [planningCollapsed, setPlanningCollapsed] = useState<Record<keyof PlanningData, boolean>>({
     packing: true,
     ideas: true,
     tasks: true,
+    notes: true,
   });
   const [planningLoaded, setPlanningLoaded] = useState(false);
 
@@ -212,7 +215,12 @@ export default function TripDetailPage() {
           Array.isArray(parsed.ideas) &&
           Array.isArray(parsed.tasks)
         ) {
-          setPlanning(parsed);
+          setPlanning({
+            packing: parsed.packing ?? [],
+            ideas: parsed.ideas ?? [],
+            tasks: parsed.tasks ?? [],
+            notes: parsed.notes ?? '',
+          });
         }
       }
     } catch (err) {
@@ -326,6 +334,45 @@ export default function TripDetailPage() {
 
   function togglePlanningCollapse(list: keyof PlanningData) {
     setPlanningCollapsed((prev) => ({ ...prev, [list]: !prev[list] }));
+  }
+
+  function handleNotesChange(value: string) {
+    setPlanning((prev) => ({ ...prev, notes: value }));
+  }
+
+  function renderNotesContent(text: string) {
+    if (!text.trim()) return null;
+    const escape = (str: string) =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    let html = escape(text);
+
+    // Markdown-style images ![alt](url)
+    html = html.replace(
+      /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<img src="$2" alt="$1" class="max-w-full rounded-md border border-slate-200 dark:border-slate-700" />',
+    );
+    // Markdown-style links [text](url)
+    html = html.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">$1</a>',
+    );
+    // Plain URL autolink
+    html = html.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">$1</a>',
+    );
+
+    const paragraphs = html
+      .split(/\n{2,}/)
+      .map((para) => `<p class="mb-2 last:mb-0">${para.replace(/\n/g, '<br/>')}</p>`)
+      .join('');
+
+    return <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: paragraphs }} />;
   }
 
   function handleTripFieldChange<K extends keyof TripFormState>(
@@ -1177,6 +1224,37 @@ async function handleImageChange(e: any) {
                   </div>
                 );
               })}
+            </div>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <button
+                type="button"
+                onClick={() => togglePlanningCollapse('notes')}
+                className="flex w-full items-center justify-between rounded-lg bg-slate-100 px-2 py-1 text-left text-sm font-semibold text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              >
+                <span>Notes &amp; inspiration</span>
+                <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                  {planning.notes.trim() ? 'Editing' : 'Empty'}
+                  <span>{planningCollapsed.notes ? '▸' : '▾'}</span>
+                </span>
+              </button>
+              {!planningCollapsed.notes && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Supports links and inline images: use [text](url) for links and ![](imageUrl) for images.
+                  </p>
+                  <textarea
+                    className="h-28 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                    value={planning.notes}
+                    onChange={(e) => handleNotesChange(e.target.value)}
+                    placeholder="Quick notes, ideas, codes, or paste image URLs with ![](https://...)"
+                  />
+                  <div className="rounded-lg border border-slate-200 bg-white/70 p-2 text-xs dark:border-slate-700 dark:bg-slate-800/70">
+                    {renderNotesContent(planning.notes) || (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Nothing to show yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
