@@ -279,7 +279,7 @@ export default function TripDetailPage() {
         return s;
       }
     }
-    return sortedSegments[sortedSegments.length - 1] ? null;
+    return sortedSegments[sortedSegments.length - 1] ?? null;
   }, [sortedSegments]);
 
   function resetSegmentForm() {
