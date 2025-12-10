@@ -352,6 +352,20 @@ export default function TripDetailPage() {
 
   function toIsoFromParts(datePart: string, timePart?: string, ampm?: string | null): string | null {
     if (!datePart) return null;
+    const monthNames = [
+      'january',
+      'february',
+      'march',
+      'april',
+      'may',
+      'june',
+      'july',
+      'august',
+      'september',
+      'october',
+      'november',
+      'december',
+    ];
     let year: number | null = null;
     let month: number | null = null;
     let day: number | null = null;
@@ -372,6 +386,17 @@ export default function TripDetailPage() {
         day = b;
       }
       year = c < 100 ? 2000 + c : c;
+    } else {
+      const match = datePart.match(/([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})/);
+      if (match) {
+        const mName = match[1].toLowerCase();
+        const idx = monthNames.indexOf(mName);
+        if (idx >= 0) {
+          month = idx + 1;
+          day = Number(match[2]);
+          year = Number(match[3]);
+        }
+      }
     }
 
     if (!year || !month || !day) return null;
@@ -406,14 +431,22 @@ export default function TripDetailPage() {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const dateRe = /(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/;
     const timeRe = /(\d{1,2}:\d{2})(?:\s?(AM|PM|am|pm))?/;
+    const monthDateRe = /([A-Za-z]+ \d{1,2},?\s*\d{4})/;
+
+    let lastHotel: string | undefined;
+    let lastLocation: string | undefined;
 
     for (const line of lines) {
-      const dateMatch = line.match(dateRe);
+      if (/hotel|apartment|inn|stay/i.test(line)) lastHotel = line;
+      if (/\d{3,}.*[A-Za-z]/.test(line) && line.length < 100) lastLocation = line;
+
+      const dateMatch = line.match(dateRe) ?? line.match(monthDateRe);
       const timeMatch = line.match(timeRe);
       const atMatch = line.match(/(?:@| at )(.+)/i);
 
       const cleaned = line
         .replace(dateRe, '')
+        .replace(monthDateRe, '')
         .replace(timeRe, '')
         .replace(/@.*/, '')
         .replace(/ at .*/i, '')
@@ -426,11 +459,19 @@ export default function TripDetailPage() {
       const ampm = timeMatch?.[2] ?? null;
       const startTime = datePart ? toIsoFromParts(datePart, timePart, ampm) : null;
 
+      const isAccommodation =
+        /check-?in/i.test(line) ||
+        /check-?out/i.test(line) ||
+        /reservation/i.test(line) ||
+        /apartment/i.test(line) ||
+        /hotel/i.test(line);
+
       segments.push({
         title: title || line.slice(0, 80),
         startTime: startTime ?? undefined,
-        location: atMatch ? atMatch[1].trim() : undefined,
+        location: atMatch ? atMatch[1].trim() : lastLocation || lastHotel,
         raw: line,
+        ...(isAccommodation ? { type: 'accommodation' } : {}),
       });
     }
     return segments;
