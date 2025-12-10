@@ -336,7 +336,10 @@ export default function TripDetailPage() {
     setPlanningCollapsed((prev) => ({ ...prev, [list]: !prev[list] }));
   }
 
-      
+  function handleNotesChange(value: string) {
+    setPlanning((prev) => ({ ...prev, notes: value }));
+  }
+
   function renderNotesContent(text: string) {
     if (!text.trim()) return null;
     return (
