@@ -188,10 +188,10 @@ export default function TripDetailPage() {
 
         setTripForm({
           title: data.title,
-          mainLocation: data.mainLocation ? '',
+          mainLocation: data.mainLocation ?? '',
           startDate: data.startDate.slice(0, 10),
           endDate: data.endDate.slice(0, 10),
-          notes: data.notes ? '',
+          notes: data.notes ?? '',
         });
       } catch (err: any) {
         console.error(err);
