@@ -237,6 +237,16 @@ export default function TripDetailPage() {
     setSegmentError(null);
   }
 
+  function openSegmentForm() {
+    resetSegmentForm();
+    setShowSegmentForm(true);
+  }
+
+  function closeSegmentForm() {
+    resetSegmentForm();
+    setShowSegmentForm(false);
+  }
+
   function handleTripFieldChange<K extends keyof TripFormState>(
     key: K,
     value: TripFormState[K],
@@ -558,7 +568,7 @@ async function handleImageChange(e: any) {
 
                   <button
                     type="button"
-                    onClick={() => setShowSegmentForm(true)}
+                    onClick={openSegmentForm}
                     className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-400"
                   >
                     + Add segment
@@ -799,73 +809,74 @@ async function handleImageChange(e: any) {
           </section>
         )}
 
-        {/* Trip attachments */}
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Attachments
-            </h3>
-            <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              {uploadingAttachmentTrip ? 'Uploading...' : 'Attach file'}
-              <input
-                type="file"
-                className="hidden"
-                onChange={async (e) => {
-                  if (!trip || !id || !e.target.files?.[0]) return;
-                  try {
-                    setUploadingAttachmentTrip(true);
-                    await uploadTripAttachment(id, e.target.files[0]);
-                    const fresh = await getTrip(id);
-                    setTrip(fresh);
-                  } catch (err) {
-                    console.error(err);
-                  } finally {
-                    setUploadingAttachmentTrip(false);
-                    e.target.value = '';
-                  }
-                }}
-              />
-            </label>
-          </div>
-          {Array.isArray(trip.attachments) &&
-          trip.attachments.length > 0 ? (
-            <ul className="space-y-1 text-xs">
-              {trip.attachments.map((att: Attachment) => (
-                <li key={att.id} className="flex items-center justify-between gap-2">
-                  <a
-                    href={buildImageUrl(att.path)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    {att.originalName}
-                  </a>
-                  <button
-                    type="button"
-                    className="text-[10px] text-slate-400 hover:text-red-500"
-                    onClick={async () => {
-                      if (!id) return;
-                      if (!confirm('Delete this attachment?')) return;
-                      try {
-                        await deleteTripAttachment(id, att.id);
-                        const fresh = await getTrip(id);
-                        setTrip(fresh);
-                      } catch (err) {
-                        console.error(err);
-                      }
-                    }}
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              No attachments yet.
-            </p>
-          )}
-        </section>
+        {activeTab === 'attachments' && (
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Attachments
+              </h3>
+              <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                {uploadingAttachmentTrip ? 'Uploading...' : 'Attach file'}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={async (e) => {
+                    if (!trip || !id || !e.target.files?.[0]) return;
+                    try {
+                      setUploadingAttachmentTrip(true);
+                      await uploadTripAttachment(id, e.target.files[0]);
+                      const fresh = await getTrip(id);
+                      setTrip(fresh);
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setUploadingAttachmentTrip(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {Array.isArray(trip.attachments) &&
+            trip.attachments.length > 0 ? (
+              <ul className="space-y-1 text-xs">
+                {trip.attachments.map((att: Attachment) => (
+                  <li key={att.id} className="flex items-center justify-between gap-2">
+                    <a
+                      href={buildImageUrl(att.path)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {att.originalName}
+                    </a>
+                    <button
+                      type="button"
+                      className="text-[10px] text-slate-400 hover:text-red-500"
+                      onClick={async () => {
+                        if (!id) return;
+                        if (!confirm('Delete this attachment?')) return;
+                        try {
+                          await deleteTripAttachment(id, att.id);
+                          const fresh = await getTrip(id);
+                          setTrip(fresh);
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                No attachments yet.
+              </p>
+            )}
+          </section>
+        )}
 
 
         {/* Trip details modal */}
@@ -967,259 +978,23 @@ async function handleImageChange(e: any) {
           </div>
         )}
 
-        <section className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          {/* Segment form */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-            
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                New segment
-              </h2>
-              <div className="flex items-center gap-2">
-                {segmentError && (
-                  <span className="text-xs text-red-600 dark:text-red-300">
-                    {segmentError}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowSegmentForm((prev) => !prev)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-                  title={showSegmentForm ? 'Hide new segment form' : 'Add new segment'}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {showSegmentForm && (
-            <form
-              onSubmit={handleSegmentSubmit}
-              className="grid grid-cols-1 gap-3 text-xs text-slate-700 md:grid-cols-2 dark:text-slate-200"
-            >
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Type
-                </label>
-                <select
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.type}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('type', e.target.value)
-                  }
-                >
-                  <option value="transport">Transport</option>
-                  <option value="accommodation">Accommodation</option>
-                  <option value="activity">Activity</option>
-                  <option value="note">Note</option>
-                </select>
-                {segmentForm.type === 'transport' && (
-                  <div className="mt-2">
-                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                      Mode
-                    </label>
-                    <select
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                      value={segmentForm.transportMode}
-                      onChange={(e) =>
-                        handleSegmentFieldChange(
-                          'transportMode',
-                          e.target.value,
-                        )
-                      }
-                    >
-                      <option value="flight">Flight</option>
-                      <option value="train">Train</option>
-                      <option value="bus">Bus</option>
-                      <option value="taxi">Taxi</option>
-                      <option value="rideshare">Rideshare</option>
-                      <option value="drive">Drive</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Title
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.title}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('title', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  {segmentForm.type === 'accommodation' ? 'Check-in time' : 'Start time'}
-                </label>
-                <input
-                  type="datetime-local"
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.startTime}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('startTime', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  {segmentForm.type === 'accommodation' ? 'Check-out time' : 'End time'}
-                </label>
-                <input
-                  type="datetime-local"
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.endTime}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('endTime', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Address
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.location}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('location', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Provider
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark;border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.provider}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('provider', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Confirmation code
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.confirmationCode}
-                  onChange={(e) =>
-                    handleSegmentFieldChange(
-                      'confirmationCode',
-                      e.target.value,
-                    )
-                  }
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Activity notes / details
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  rows={3}
-                  value={segmentForm.activityNotes}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('activityNotes', e.target.value)
-                  }
-                  placeholder="Optional notes, booking info, or instructions for this activity"
-                />
-              </div>
-
-
-              {segmentForm.type === 'transport' &&
-                segmentForm.transportMode === 'flight' && (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Flight number
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.flightNumber}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'flightNumber',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="e.g. QF15"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Seat number
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.seatNumber}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'seatNumber',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="e.g. 32A"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Passenger name
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.passengerName}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'passengerName',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Name on booking"
-                      />
-                    </div>
-                  </>
-                )}
-
-              <div className="mt-2 flex items-center justify-between md:col-span-2">
-                <button
-                  type="button"
-                  onClick={resetSegmentForm}
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                >
-                  Clear
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
-                >
-                  {editingSegmentId ? 'Update segment' : 'Add segment'}
-                </button>
-              </div>
-            </form>
-            )}
-
-          </section>
-
-          {/* Itinerary */}
+        {activeTab !== 'attachments' && (
           <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
-              Itinerary
-            </h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Itinerary
+              </h2>
+              <button
+                type="button"
+                onClick={openSegmentForm}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                + Add segment
+              </button>
+            </div>
             {sortedDayKeys.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-300 bg-slate-100/60 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                No segments yet. Add flights, stays, transport, or activities
-                on the left.
+                No segments yet. Use the Add segment button above to start planning.
               </div>
             ) : (
               <div className="space-y-4">
@@ -1444,7 +1219,245 @@ async function handleImageChange(e: any) {
               </div>
             )}
           </section>
-        </section>
+        )}
+
+        {showSegmentForm && (
+          <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/50 px-4 py-8">
+            <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {editingSegmentId ? 'Edit segment' : 'New segment'}
+                  </h2>
+                  {segmentError && (
+                    <p className="text-xs text-red-600 dark:text-red-300">{segmentError}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={closeSegmentForm}
+                  className="rounded-full px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+            <form
+              onSubmit={handleSegmentSubmit}
+              className="grid grid-cols-1 gap-3 text-xs text-slate-700 md:grid-cols-2 dark:text-slate-200"
+            >
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Type
+                </label>
+                <select
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.type}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('type', e.target.value)
+                  }
+                >
+                  <option value="transport">Transport</option>
+                  <option value="accommodation">Accommodation</option>
+                  <option value="activity">Activity</option>
+                  <option value="note">Note</option>
+                </select>
+                {segmentForm.type === 'transport' && (
+                  <div className="mt-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Mode
+                    </label>
+                    <select
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.transportMode}
+                      onChange={(e) =>
+                        handleSegmentFieldChange(
+                          'transportMode',
+                          e.target.value,
+                        )
+                      }
+                    >
+                      <option value="flight">Flight</option>
+                      <option value="train">Train</option>
+                      <option value="bus">Bus</option>
+                      <option value="taxi">Taxi</option>
+                      <option value="rideshare">Rideshare</option>
+                      <option value="drive">Drive</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Title
+                </label>
+                <input
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.title}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('title', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  {segmentForm.type === 'accommodation' ? 'Check-in time' : 'Start time'}
+                </label>
+                <input
+                  type="datetime-local"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.startTime}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('startTime', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  {segmentForm.type === 'accommodation' ? 'Check-out time' : 'End time'}
+                </label>
+                <input
+                  type="datetime-local"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.endTime}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('endTime', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Address
+                </label>
+                <input
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.location}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('location', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Provider
+                </label>
+                <input
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark;border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.provider}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('provider', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Confirmation code
+                </label>
+                <input
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  value={segmentForm.confirmationCode}
+                  onChange={(e) =>
+                    handleSegmentFieldChange(
+                      'confirmationCode',
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                  Activity notes / details
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                  rows={3}
+                  value={segmentForm.activityNotes}
+                  onChange={(e) =>
+                    handleSegmentFieldChange('activityNotes', e.target.value)
+                  }
+                  placeholder="Optional notes, booking info, or instructions for this activity"
+                />
+              </div>
+
+
+              {segmentForm.type === 'transport' &&
+                segmentForm.transportMode === 'flight' && (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                        Flight number
+                      </label>
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                        value={segmentForm.flightNumber}
+                        onChange={(e) =>
+                          handleSegmentFieldChange(
+                            'flightNumber',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="e.g. QF15"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                        Seat number
+                      </label>
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                        value={segmentForm.seatNumber}
+                        onChange={(e) =>
+                          handleSegmentFieldChange(
+                            'seatNumber',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="e.g. 32A"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                        Passenger name
+                      </label>
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                        value={segmentForm.passengerName}
+                        onChange={(e) =>
+                          handleSegmentFieldChange(
+                            'passengerName',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="Name on booking"
+                      />
+                    </div>
+                  </>
+                )}
+
+              <div className="mt-2 flex items-center justify-between md:col-span-2">
+                <button
+                  type="button"
+                  onClick={resetSegmentForm}
+                  className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Clear
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+                >
+                  {editingSegmentId ? 'Update segment' : 'Add segment'}
+                </button>
+              </div>
+            </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
