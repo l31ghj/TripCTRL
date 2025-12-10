@@ -103,35 +103,35 @@ function getSegmentMeta(type: string) {
   switch (type) {
     case 'accommodation':
       return {
-        icon: '­ƒÅ¿',
+        icon: '🏨',
         label: 'Stay',
         badgeClass:
           'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-900/40 dark:text-emerald-100',
       };
     case 'transport':
       return {
-        icon: '­ƒº¡',
+        icon: '✈️',
         label: 'Transport',
         badgeClass:
           'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-900/40 dark:text-sky-100',
       };
     case 'activity':
       return {
-        icon: '­ƒÄƒ´©Å',
+        icon: '🎟️',
         label: 'Activity',
         badgeClass:
           'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-900/60 dark:bg-purple-900/40 dark:text-purple-100',
       };
     case 'note':
       return {
-        icon: '­ƒôØ',
+        icon: '📝',
         label: 'Note',
         badgeClass:
           'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
       };
     default:
       return {
-        icon: '­ƒôî',
+        icon: '📌',
         label: 'Other',
         badgeClass:
           'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
@@ -188,10 +188,10 @@ export default function TripDetailPage() {
 
         setTripForm({
           title: data.title,
-          mainLocation: data.mainLocation ?? '',
+          mainLocation: data.mainLocation ? '',
           startDate: data.startDate.slice(0, 10),
           endDate: data.endDate.slice(0, 10),
-          notes: data.notes ?? '',
+          notes: data.notes ? '',
         });
       } catch (err: any) {
         console.error(err);
@@ -216,10 +216,10 @@ export default function TripDetailPage() {
           Array.isArray(parsed.tasks)
         ) {
           setPlanning({
-            packing: parsed.packing ?? [],
-            ideas: parsed.ideas ?? [],
-            tasks: parsed.tasks ?? [],
-            notes: parsed.notes ?? '',
+            packing: parsed.packing ? [],
+            ideas: parsed.ideas ? [],
+            tasks: parsed.tasks ? [],
+            notes: parsed.notes ? '',
           });
         }
       }
@@ -279,7 +279,7 @@ export default function TripDetailPage() {
         return s;
       }
     }
-    return sortedSegments[sortedSegments.length - 1] ?? null;
+    return sortedSegments[sortedSegments.length - 1] ? null;
   }, [sortedSegments]);
 
   function resetSegmentForm() {
@@ -489,15 +489,15 @@ export default function TripDetailPage() {
           : seg.type === 'flight'
           ? 'flight'
           : '',
-      title: seg.title ?? '',
+      title: seg.title ? '',
       startTime: toLocalInputValue(seg.startTime),
       endTime: seg.endTime ? toLocalInputValue(seg.endTime) : '',
-      location: seg.location ?? '',
-      provider: seg.provider ?? '',
-      confirmationCode: seg.confirmationCode ?? '',
-      flightNumber: seg.flightNumber ?? '',
-      seatNumber: seg.seatNumber ?? '',
-      passengerName: seg.passengerName ?? '',
+      location: seg.location ? '',
+      provider: seg.provider ? '',
+      confirmationCode: seg.confirmationCode ? '',
+      flightNumber: seg.flightNumber ? '',
+      seatNumber: seg.seatNumber ? '',
+      passengerName: seg.passengerName ? '',
       activityNotes:
         typeof (seg as any).details === 'string'
           ? (seg as any).details
@@ -638,12 +638,12 @@ async function handleImageChange(e: any) {
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-100/80">
                     {trip.mainLocation && (
                       <span className="inline-flex items-center gap-1">
-                        <span>­ƒôì</span>
+                        <span>📍</span>
                         <span>{trip.mainLocation}</span>
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1">
-                      <span>­ƒùô</span>
+                      <span>🗓</span>
                       <span>
                         {new Date(trip.startDate).toLocaleDateString()} -{' '}
                         {new Date(trip.endDate).toLocaleDateString()}
@@ -651,7 +651,7 @@ async function handleImageChange(e: any) {
                     </span>
                     {sortedSegments.length > 0 && (
                       <span className="inline-flex items-center gap-1">
-                        <span>­ƒº®</span>
+                        <span>🧭</span>
                         <span>{sortedSegments.length} segments</span>
                       </span>
                     )}
@@ -683,7 +683,7 @@ async function handleImageChange(e: any) {
                     onClick={() => setTripFormOpen(true)}
                     className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20"
                   >
-                    Ô£Å´©Å Edit details
+                    ✏️ Edit details
                   </button>
                 </div>
 
@@ -867,7 +867,7 @@ async function handleImageChange(e: any) {
                                 onClick={() => {
                                   window.open(
                                     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                      s.location ?? '',
+                                      s.location ? '',
                                     )}`,
                                     '_blank',
                                   );
@@ -915,7 +915,7 @@ async function handleImageChange(e: any) {
                           onClick={() => {
                             window.open(
                               `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                nextSegment.location ?? '',
+                                nextSegment.location ? '',
                               )}`,
                               '_blank',
                             );
@@ -1152,7 +1152,7 @@ async function handleImageChange(e: any) {
                       <span>{heading}</span>
                       <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500 dark:text-slate-400">
                         <span>{totalCount} item{totalCount === 1 ? '' : 's'} ({doneCount} done)</span>
-                        <span>{collapsed ? 'Ôû©' : 'Ôû¥'}</span>
+                        <span>{collapsed ? '▸' : '▾'}</span>
                       </span>
                     </button>
 
@@ -1210,7 +1210,7 @@ async function handleImageChange(e: any) {
                 <span>Notes &amp; inspiration</span>
                 <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500 dark:text-slate-400">
                   {planning.notes.trim() ? 'Editing' : 'Empty'}
-                  <span>{planningCollapsed.notes ? 'Ôû©' : 'Ôû¥'}</span>
+                  <span>{planningCollapsed.notes ? '▸' : '▾'}</span>
                 </span>
               </button>
               {!planningCollapsed.notes && (
@@ -1260,7 +1260,7 @@ async function handleImageChange(e: any) {
                     >
                       <div className="mb-3 flex items-center gap-3 text-xs font-semibold text-slate-900 dark:text-slate-100">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-base dark:bg-slate-800">
-                          ­ƒôà
+                          📅
                         </div>
                         <div>
                           <div>{dateLabel}</div>
@@ -1313,13 +1313,13 @@ async function handleImageChange(e: any) {
                                         <div className="flex items-center gap-2">
                                           <div className="truncate">
                                             {s.location}
-                                            {s.location && s.provider && ' ┬À '}
+                                            {s.location && s.provider && ' · '}
                                             {s.provider}
                                           </div>
                                           {s.location && (
                                             <a
                                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                                s.location ?? '',
+                                                s.location ? '',
                                               )}`}
                                               target="_blank"
                                               rel="noopener noreferrer"
@@ -1348,11 +1348,11 @@ async function handleImageChange(e: any) {
                                       {(s.details &&
                                         (typeof s.details === 'string'
                                           ? s.details
-                                          : s.details.activityNotes ?? s.details.notes)) && (
+                                          : s.details.activityNotes ? s.details.notes)) && (
                                         <div className="mt-1 rounded-md bg-slate-100 p-2 text-[11px] leading-snug text-slate-600 dark:bg-slate-700 dark:text-slate-200">
                                           {typeof s.details === 'string'
                                             ? s.details
-                                            : s.details.activityNotes ?? s.details.notes}
+                                            : s.details.activityNotes ? s.details.notes}
                                         </div>
                                       )}
                                       <div className="mt-1 flex items-start justify-between text-[11px] text-slate-400 dark:text-slate-400">
@@ -1416,25 +1416,25 @@ async function handleImageChange(e: any) {
                                           )}
                                         </div>
                                       </div>
-                                      {(s.flightNumber || s.seatNumber || s.passengerName) && (
-                                        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
-                                          {s.flightNumber && (
-                                            <span className="inline-flex items-center gap-1">
-                                              <span>Ô£ê´©Å</span>
-                                              <span>{s.flightNumber}</span>
-                                            </span>
-                                          )}
-                                          {s.seatNumber && (
-                                            <span className="inline-flex items-center gap-1">
-                                              <span>­ƒÆ║</span>
-                                              <span>{s.seatNumber}</span>
-                                            </span>
-                                          )}
-                                          {s.passengerName && (
-                                            <span className="inline-flex items-center gap-1">
-                                              <span>­ƒæñ</span>
-                                              <span>{s.passengerName}</span>
-                                            </span>
+                                    {(s.flightNumber || s.seatNumber || s.passengerName) && (
+                                      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-300">
+                                        {s.flightNumber && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>✈️</span>
+                                            <span>{s.flightNumber}</span>
+                                          </span>
+                                        )}
+                                        {s.seatNumber && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>💺</span>
+                                            <span>{s.seatNumber}</span>
+                                          </span>
+                                        )}
+                                        {s.passengerName && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <span>👤</span>
+                                            <span>{s.passengerName}</span>
+                                          </span>
                                           )}
                                         </div>
                                       )}
