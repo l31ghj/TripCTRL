@@ -58,7 +58,9 @@ type PlanningData = {
 type ParsedEmailSegment = {
   title: string;
   startTime?: string | null;
+  endTime?: string | null;
   location?: string;
+  type?: string;
   raw: string;
 };
 
@@ -430,50 +432,89 @@ export default function TripDetailPage() {
     const segments: ParsedEmailSegment[] = [];
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const dateRe = /(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/;
-    const timeRe = /(\d{1,2}:\d{2})(?:\s?(AM|PM|am|pm))?/;
     const monthDateRe = /([A-Za-z]+ \d{1,2},?\s*\d{4})/;
+    const timeRe = /(\d{1,2}:\d{2})(?:\s?(AM|PM|am|pm))?/;
+    const windowTimeRe = /(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})(?:\s?(AM|PM|am|pm))?/;
 
-    let lastHotel: string | undefined;
-    let lastLocation: string | undefined;
+    const hotelIndex = lines.findIndex((l) => /hotel|apartment|inn|stay/i.test(l));
+    const hotelName = hotelIndex >= 0 ? lines[hotelIndex] : undefined;
+    const addressLine =
+      hotelIndex >= 0
+        ? lines.slice(hotelIndex + 1).find((l) => /\d{3,}.*[A-Za-z]/.test(l) && l.length < 120)
+        : undefined;
+
+    const checkInLine = lines.find((l) => /check-?in/i.test(l));
+
+    const parseLineDate = (line: string) => line.match(dateRe)?.[1] ?? line.match(monthDateRe)?.[1] ?? '';
+
+    let checkInStart: string | null = null;
+    let checkInEnd: string | null = null;
+    if (checkInLine) {
+      const datePart = parseLineDate(checkInLine);
+      const windowMatch = checkInLine.match(windowTimeRe);
+      if (windowMatch) {
+        const [, t1, t2, ampm] = windowMatch;
+        checkInStart = toIsoFromParts(datePart, t1, ampm ?? null);
+        checkInEnd = toIsoFromParts(datePart, t2, ampm ?? null);
+      } else {
+        const timeMatch = checkInLine.match(timeRe);
+        checkInStart = toIsoFromParts(datePart, timeMatch?.[1], timeMatch?.[2] ?? null);
+      }
+    }
+
+    if (checkInLine) {
+      segments.push({
+        title: hotelName ? `${hotelName} check-in` : 'Accommodation check-in',
+        type: 'accommodation',
+        startTime: checkInStart ?? undefined,
+        endTime: checkInEnd ?? undefined,
+        location: addressLine || hotelName,
+        raw: checkInLine,
+      });
+    }
+
+    const ignoreLine = (line: string) => /stay safe|security|cashback|learn more|terms|conditions/i.test(line);
 
     for (const line of lines) {
-      if (/hotel|apartment|inn|stay/i.test(line)) lastHotel = line;
-      if (/\d{3,}.*[A-Za-z]/.test(line) && line.length < 100) lastLocation = line;
-
-      const dateMatch = line.match(dateRe) ?? line.match(monthDateRe);
+      if (ignoreLine(line)) continue;
+      const datePart = parseLineDate(line);
+      if (!datePart) continue;
+      const timeWindow = line.match(windowTimeRe);
       const timeMatch = line.match(timeRe);
       const atMatch = line.match(/(?:@| at )(.+)/i);
-
       const cleaned = line
         .replace(dateRe, '')
         .replace(monthDateRe, '')
         .replace(timeRe, '')
+        .replace(windowTimeRe, '')
         .replace(/@.*/, '')
         .replace(/ at .*/i, '')
         .replace(/\s+/g, ' ')
         .trim();
       const title = cleaned || line.slice(0, 80);
 
-      const datePart = dateMatch?.[1] ?? '';
-      const timePart = timeMatch?.[1];
-      const ampm = timeMatch?.[2] ?? null;
-      const startTime = datePart ? toIsoFromParts(datePart, timePart, ampm) : null;
-
-      const isAccommodation =
-        /check-?in/i.test(line) ||
-        /check-?out/i.test(line) ||
-        /reservation/i.test(line) ||
-        /apartment/i.test(line) ||
-        /hotel/i.test(line);
+      let startTime: string | null = null;
+      let endTime: string | null = null;
+      if (timeWindow) {
+        const [, t1, t2, ampm] = timeWindow;
+        startTime = toIsoFromParts(datePart, t1, ampm ?? null);
+        endTime = toIsoFromParts(datePart, t2, ampm ?? null);
+      } else if (timeMatch) {
+        startTime = toIsoFromParts(datePart, timeMatch[1], timeMatch[2] ?? null);
+      } else {
+        startTime = toIsoFromParts(datePart, undefined, null);
+      }
 
       segments.push({
-        title: title || line.slice(0, 80),
+        title,
         startTime: startTime ?? undefined,
-        location: atMatch ? atMatch[1].trim() : lastLocation || lastHotel,
+        endTime: endTime ?? undefined,
+        location: atMatch ? atMatch[1].trim() : addressLine || hotelName,
         raw: line,
-        ...(isAccommodation ? { type: 'accommodation' } : {}),
+        type: /hotel|apartment|inn|stay/i.test(line) ? 'accommodation' : 'activity',
       });
     }
+
     return segments;
   }
 
@@ -493,10 +534,11 @@ export default function TripDetailPage() {
     try {
       setCreatingFromEmail(true);
       const payload: any = {
-        type: 'activity',
+        type: seg.type ?? 'activity',
         title: seg.title || 'New segment',
       };
       if (seg.startTime) payload.startTime = seg.startTime;
+      if (seg.endTime) payload.endTime = seg.endTime;
       if (seg.location) payload.location = seg.location;
       const updated = await createSegment(id, payload);
       setTrip(updated);
