@@ -4,10 +4,14 @@ import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { TripsPage } from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { getCurrentUser } from './auth/token';
 import './index.css';
 
 const App = () => {
-  const isAuthed = !!localStorage.getItem('accessToken');
+  const currentUser = getCurrentUser();
+  const isAuthed = !!currentUser;
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <BrowserRouter>
@@ -20,6 +24,12 @@ const App = () => {
         <Route
           path="/trips/:id"
           element={isAuthed ? <TripDetailPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/admin/users"
+          element={
+            isAuthed && isAdmin ? <AdminUsersPage /> : <Navigate to={isAuthed ? '/trips' : '/login'} />
+          }
         />
         <Route path="*" element={<Navigate to={isAuthed ? '/trips' : '/login'} />} />
       </Routes>

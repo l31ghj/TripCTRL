@@ -6,6 +6,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (localStorage.getItem('accessToken')) {
@@ -16,12 +17,19 @@ export function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     try {
       if (isRegister) {
-        await register(email, password);
-      } else {
-        await login(email, password);
+        const res = await register(email, password);
+        if (res.accessToken) {
+          window.location.href = '/';
+          return;
+        }
+        setInfo(res.message ?? 'Account created. Pending admin approval.');
+        return;
       }
+
+      await login(email, password);
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message ?? 'Error');
@@ -38,6 +46,7 @@ export function LoginPage() {
           {isRegister ? 'Create TripCTRL account' : 'Sign in to TripCTRL'}
         </h1>
         {error && <div className="mb-3 text-red-600 text-sm">{error}</div>}
+        {info && <div className="mb-3 text-amber-700 text-sm">{info}</div>}
         <div className="mb-4">
           <label className="block text-gray-700 text-sm mb-2">Email</label>
           <input

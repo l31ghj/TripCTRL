@@ -5,16 +5,20 @@ export async function login(email: string, password: string) {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  localStorage.setItem('accessToken', res.accessToken);
+  if (res.accessToken) {
+    localStorage.setItem('accessToken', res.accessToken);
+  }
   return res;
 }
 
 export async function register(email: string, password: string) {
-  const res = await api<{ accessToken: string }>('/auth/register', {
+  const res = await api<{ accessToken?: string; status?: string; message?: string }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  localStorage.setItem('accessToken', res.accessToken);
+  if (res.accessToken) {
+    localStorage.setItem('accessToken', res.accessToken);
+  }
   return res;
 }
 

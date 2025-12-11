@@ -2,7 +2,7 @@ import tripLogo from '../assets/tripctrl-logo-mark.svg';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout } from '../api/auth';
-import { getCurrentUserEmail } from '../auth/token';
+import { getCurrentUser } from '../auth/token';
 
 function getInitialTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
@@ -16,7 +16,9 @@ function getInitialTheme(): 'light' | 'dark' {
 
 export function NavBar() {
   const navigate = useNavigate();
-  const email = getCurrentUserEmail();
+  const user = getCurrentUser();
+  const email = user?.email ?? null;
+  const isAdmin = user?.role === 'admin';
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
 
   useEffect(() => {
@@ -61,7 +63,14 @@ export function NavBar() {
             >
               My trips
             </Link>
-            {/* future: dashboard, settings, etc */}
+            {isAdmin && (
+              <Link
+                to="/admin/users"
+                className="rounded-full px-3 py-1 font-medium transition hover:bg-amber-50 hover:text-amber-800 dark:hover:bg-slate-800 dark:hover:text-amber-200"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
 

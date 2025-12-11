@@ -1,4 +1,10 @@
-export function getCurrentUserEmail(): string | null {
+export type DecodedToken = {
+  userId: string;
+  email: string;
+  role?: string;
+};
+
+function decodeToken(): DecodedToken | null {
   const token = localStorage.getItem('accessToken');
   if (!token) return null;
 
@@ -8,8 +14,26 @@ export function getCurrentUserEmail(): string | null {
   try {
     const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const json = JSON.parse(atob(payloadBase64));
-    return json.email ?? null;
+    return {
+      userId: json.sub,
+      email: json.email,
+      role: json.role,
+    };
   } catch {
     return null;
   }
+}
+
+export function getCurrentUserEmail(): string | null {
+  return decodeToken()?.email ?? null;
+}
+
+export function getCurrentUser() {
+  const decoded = decodeToken();
+  if (!decoded) return null;
+  return decoded;
+}
+
+export function getCurrentUserRole(): string | null {
+  return decodeToken()?.role ?? null;
 }
