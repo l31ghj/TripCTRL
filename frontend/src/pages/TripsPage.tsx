@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { NavBar } from '../components/NavBar';
 import { buildImageUrl } from '../api/client';
 import { getCurrentUser } from '../auth/token';
-import { getCurrentUser } from '../auth/token';
 
 function getTripStatus(trip: Trip): 'upcoming' | 'in-progress' | 'past' {
   const start = new Date(trip.startDate);
@@ -38,8 +37,6 @@ export function TripsPage() {
   const [showPastTrips, setShowPastTrips] = useState(false);
 
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
-  const isViewOnly = currentUser?.role === 'view_only';
   const currentUser = getCurrentUser();
   const isViewOnly = currentUser?.role === 'view_only';
 
