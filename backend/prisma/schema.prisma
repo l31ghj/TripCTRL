@@ -12,7 +12,10 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+  role      UserRole  @default(member)
+  status    UserStatus @default(pending)
   trips     Trip[]
+  tripShares TripShare[]
 }
 
 model Trip {
@@ -29,6 +32,7 @@ model Trip {
   updatedAt    DateTime  @updatedAt
   segments     Segment[]
   attachments Attachment[]
+  shares      TripShare[]
 
   @@index([userId, startDate])
 }
@@ -89,3 +93,33 @@ model Attachment {
   @@index([segmentId])
 }
 
+model TripShare {
+  id          String         @id @default(uuid())
+  tripId      String
+  userId      String
+  permission  TripPermission
+  createdAt   DateTime        @default(now())
+  trip        Trip            @relation(fields: [tripId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
+
+  @@unique([tripId, userId])
+  @@index([userId])
+}
+
+enum UserRole {
+  admin
+  manager
+  member
+}
+
+enum UserStatus {
+  pending
+  active
+  rejected
+}
+
+enum TripPermission {
+  owner
+  edit
+  view
+}

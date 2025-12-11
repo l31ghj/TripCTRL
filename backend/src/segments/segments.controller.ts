@@ -43,7 +43,7 @@ export class SegmentsController {
     @Param('tripId') tripId: string,
     @Body() dto: CreateSegmentDto,
   ) {
-    return this.segments.createSegment(req.user.userId, tripId, dto);
+    return this.segments.createSegment(req.user.userId, req.user.role, tripId, dto);
   }
 
   @Put('segments/:id')
@@ -52,7 +52,7 @@ export class SegmentsController {
     @Param('id') id: string,
     @Body() dto: UpdateSegmentDto,
   ) {
-    return this.segments.updateSegment(req.user.userId, id, dto);
+    return this.segments.updateSegment(req.user.userId, req.user.role, id, dto);
   }
 
 
@@ -72,7 +72,7 @@ export class SegmentsController {
       throw new BadRequestException('No file uploaded');
     }
     const publicPath = `/uploads/attachments/${file.filename}`;
-    return this.segments.addSegmentAttachment(req.user.userId, id, {
+    return this.segments.addSegmentAttachment(req.user.userId, req.user.role, id, {
       path: publicPath,
       originalName: file.originalname,
       mimeType: file.mimetype,
@@ -87,11 +87,11 @@ export class SegmentsController {
     @Param('id') id: string,
     @Param('attachmentId') attachmentId: string,
   ) {
-    return this.segments.deleteSegmentAttachment(req.user.userId, id, attachmentId);
+    return this.segments.deleteSegmentAttachment(req.user.userId, req.user.role, id, attachmentId);
   }
 
   @Delete('segments/:id')
   remove(@Req() req: any, @Param('id') id: string) {
-    return this.segments.deleteSegment(req.user.userId, id);
+    return this.segments.deleteSegment(req.user.userId, req.user.role, id);
   }
 }

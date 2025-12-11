@@ -19,6 +19,7 @@ import { TripsService } from './trips.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ShareTripDto } from './dto/share-trip.dto';
 
 function tripImageStorage() {
   return diskStorage({
@@ -50,12 +51,12 @@ export class TripsController {
 
   @Get()
   list(@Req() req: any) {
-    return this.trips.listTrips(req.user.userId);
+    return this.trips.listTrips(req.user.userId, req.user.role);
   }
 
   @Get(':id')
   getOne(@Req() req: any, @Param('id') id: string) {
-    return this.trips.getTrip(req.user.userId, id);
+    return this.trips.getTrip(req.user.userId, req.user.role, id);
   }
 
   @Post()
@@ -69,7 +70,7 @@ export class TripsController {
     @Param('id') id: string,
     @Body() dto: UpdateTripDto,
   ) {
-    return this.trips.updateTrip(req.user.userId, id, dto);
+    return this.trips.updateTrip(req.user.userId, req.user.role, id, dto);
   }
 
   @Post(':id/image')
@@ -91,7 +92,7 @@ export class TripsController {
     @UploadedFile() file: any,
   ) {
     const publicPath = `/uploads/trips/${file.filename}`;
-    return this.trips.updateTripImage(req.user.userId, id, publicPath);
+    return this.trips.updateTripImage(req.user.userId, req.user.role, id, publicPath);
   }
 
 
@@ -111,7 +112,7 @@ export class TripsController {
       throw new BadRequestException('No file uploaded');
     }
     const publicPath = `/uploads/attachments/${file.filename}`;
-    return this.trips.addTripAttachment(req.user.userId, id, {
+    return this.trips.addTripAttachment(req.user.userId, req.user.role, id, {
       path: publicPath,
       originalName: file.originalname,
       mimeType: file.mimetype,
@@ -126,11 +127,26 @@ export class TripsController {
     @Param('id') id: string,
     @Param('attachmentId') attachmentId: string,
   ) {
-    return this.trips.deleteTripAttachment(req.user.userId, id, attachmentId);
+    return this.trips.deleteTripAttachment(req.user.userId, req.user.role, id, attachmentId);
   }
 
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
-    return this.trips.deleteTrip(req.user.userId, id);
+    return this.trips.deleteTrip(req.user.userId, req.user.role, id);
+  }
+
+  @Get(':id/shares')
+  listShares(@Req() req: any, @Param('id') id: string) {
+    return this.trips.listShares(req.user.userId, req.user.role, id);
+  }
+
+  @Post(':id/shares')
+  addShare(@Req() req: any, @Param('id') id: string, @Body() dto: ShareTripDto) {
+    return this.trips.addShare(req.user.userId, req.user.role, id, dto.userId, dto.permission);
+  }
+
+  @Delete(':id/shares/:shareId')
+  removeShare(@Req() req: any, @Param('id') id: string, @Param('shareId') shareId: string) {
+    return this.trips.removeShare(req.user.userId, req.user.role, id, shareId);
   }
 }
