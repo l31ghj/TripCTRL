@@ -238,12 +238,6 @@ export function TripsPage() {
                       : trip.accessPermission === 'edit'
                       ? 'Editor'
                       : 'Shared with you';
-                    const isOwner = trip.userId && currentUser?.userId === trip.userId;
-                    const permissionLabel = isOwner
-                      ? 'Owner'
-                      : trip.accessPermission === 'edit'
-                      ? 'Editor'
-                      : 'Shared with you';
 
                     let statusLabel = 'Upcoming';
                     let statusClass =
