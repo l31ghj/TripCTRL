@@ -934,6 +934,15 @@ async function handleImageChange(e: any) {
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
                       Trip overview
                     </span>
+                    {trip.accessPermission && (
+                      <span className="rounded-full border border-white/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur">
+                        {trip.accessPermission === 'owner'
+                          ? 'Owner'
+                          : trip.accessPermission === 'edit'
+                            ? 'Editor'
+                            : 'View only'}
+                      </span>
+                    )}
                     {statusLabel && (
                       <span
                         className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium backdrop-blur ${statusClass}`}

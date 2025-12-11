@@ -229,9 +229,21 @@ export function TripsPage() {
                   {upcomingAndCurrentTrips.map((trip) => {
                     const status = getTripStatus(trip);
                     const daysUntil = getDaysUntilStart(trip);
-                    const imageUrl = buildImageUrl(trip.imagePath);
-                    const start = new Date(trip.startDate);
-                    const end = new Date(trip.endDate);
+                  const imageUrl = buildImageUrl(trip.imagePath);
+                  const start = new Date(trip.startDate);
+                  const end = new Date(trip.endDate);
+                    const isOwner = trip.userId && currentUser?.userId === trip.userId;
+                    const permissionLabel = isOwner
+                      ? 'Owner'
+                      : trip.accessPermission === 'edit'
+                      ? 'Editor'
+                      : 'Shared with you';
+                    const isOwner = trip.userId && currentUser?.userId === trip.userId;
+                    const permissionLabel = isOwner
+                      ? 'Owner'
+                      : trip.accessPermission === 'edit'
+                      ? 'Editor'
+                      : 'Shared with you';
 
                     let statusLabel = 'Upcoming';
                     let statusClass =
@@ -278,6 +290,16 @@ export function TripsPage() {
                               <h3 className="line-clamp-2 text-sm font-semibold text-slate-900 transition group-hover:text-blue-700 dark:text-slate-50 dark:group-hover:text-blue-300">
                                 {trip.title}
                               </h3>
+                              <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                                  {permissionLabel}
+                                </span>
+                                {!isOwner && (
+                                  <span className="truncate">
+                                    Shared with you
+                                  </span>
+                                )}
+                              </div>
                               {trip.mainLocation && (
                                 <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                   {trip.mainLocation}
