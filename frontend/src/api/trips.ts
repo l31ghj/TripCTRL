@@ -51,7 +51,7 @@ export type TripShare = {
   user: {
     id: string;
     email: string;
-    role: string;
+    role: 'admin' | 'manager' | 'member' | 'view_only';
     status: string;
     createdAt: string;
   };

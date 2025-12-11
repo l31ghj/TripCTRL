@@ -1,7 +1,7 @@
 export type DecodedToken = {
   userId: string;
   email: string;
-  role?: string;
+  role?: 'admin' | 'manager' | 'member' | 'view_only';
 };
 
 function decodeToken(): DecodedToken | null {

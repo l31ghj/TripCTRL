@@ -111,6 +111,7 @@ enum UserRole {
   admin
   manager
   member
+  view_only
 }
 
 enum UserStatus {

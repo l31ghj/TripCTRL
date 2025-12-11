@@ -68,6 +68,28 @@ export class TripsService {
   }
 
   listTrips(userId: string, userRole: UserRole) {
+    if (userRole === UserRole.view_only) {
+      return this.prisma.trip
+        .findMany({
+          where: {
+            shares: {
+              some: { userId },
+            },
+          },
+          orderBy: { startDate: 'asc' },
+          include: { shares: { where: { userId }, select: { permission: true } } },
+        })
+        .then((trips) =>
+          trips.map((trip) => {
+            const { shares, ...rest } = trip as any;
+            return {
+              ...rest,
+              accessPermission: trip.shares[0]?.permission ?? TripPermission.view,
+            };
+          }),
+        );
+    }
+
     if (userRole === UserRole.admin) {
       return this.prisma.trip.findMany({
         orderBy: { startDate: 'asc' },

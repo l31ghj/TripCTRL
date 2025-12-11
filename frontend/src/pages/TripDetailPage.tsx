@@ -1717,14 +1717,16 @@ async function handleImageChange(e: any) {
                         <div className="font-semibold text-slate-800 dark:text-slate-100">
                           {seg.title || 'Untitled'}
                         </div>
-                        <button
-                          type="button"
-                          disabled={creatingFromEmail}
-                          onClick={() => handleCreateSegmentFromEmail(seg)}
-                          className="rounded-full bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
-                        >
-                          {creatingFromEmail ? 'Adding...' : 'Add segment'}
-                        </button>
+                        {canEditTrip && (
+                          <button
+                            type="button"
+                            disabled={creatingFromEmail}
+                            onClick={() => handleCreateSegmentFromEmail(seg)}
+                            className="rounded-full bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
+                          >
+                            {creatingFromEmail ? 'Adding...' : 'Add segment'}
+                          </button>
+                        )}
                       </div>
                       <div className="mt-1 text-slate-500 dark:text-slate-300">
                         {seg.startTime ? new Date(seg.startTime).toLocaleString() : 'No time detected'}
@@ -1747,13 +1749,15 @@ async function handleImageChange(e: any) {
               <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 Itinerary
               </h2>
-              <button
-                type="button"
-                onClick={openSegmentForm}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                + Add segment
-              </button>
+              {canEditTrip && (
+                <button
+                  type="button"
+                  onClick={openSegmentForm}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  + Add segment
+                </button>
+              )}
             </div>
             {sortedDayKeys.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-300 bg-slate-100/60 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">

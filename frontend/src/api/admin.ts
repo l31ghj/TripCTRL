@@ -3,7 +3,7 @@ import { api } from './client';
 export type AdminUser = {
   id: string;
   email: string;
-  role: 'admin' | 'manager' | 'member';
+  role: 'admin' | 'manager' | 'member' | 'view_only';
   status: 'pending' | 'active' | 'rejected';
   createdAt: string;
 };
@@ -19,7 +19,7 @@ export function updateUserStatus(userId: string, status: 'pending' | 'active' | 
   });
 }
 
-export function updateUserRole(userId: string, role: 'admin' | 'manager' | 'member') {
+export function updateUserRole(userId: string, role: 'admin' | 'manager' | 'member' | 'view_only') {
   return api<AdminUser>(`/admin/users/${userId}/role`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),

@@ -100,6 +100,9 @@ export function AdminUsersPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Approve pending accounts, adjust roles, and review access.
             </p>
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              Admin: full access and approvals · Manager: share trips and edit trips · Member: own trips + shared access · View only: can only view trips shared with them
+            </p>
           </div>
           <button
             type="button"
@@ -190,6 +193,7 @@ export function AdminUsersPage() {
                           <option value="admin">Admin</option>
                           <option value="manager">Manager</option>
                           <option value="member">Member</option>
+                          <option value="view_only">View only</option>
                         </select>
                       </div>
                       <div className="flex items-center gap-2">

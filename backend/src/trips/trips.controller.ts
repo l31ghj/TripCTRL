@@ -62,6 +62,9 @@ export class TripsController {
 
   @Post()
   create(@Req() req: any, @Body() dto: CreateTripDto) {
+    if (req.user.role === 'view_only') {
+      throw new BadRequestException('View-only users cannot create trips');
+    }
     return this.trips.createTrip(req.user.userId, dto);
   }
 
