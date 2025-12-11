@@ -1026,22 +1026,22 @@ async function handleImageChange(e: any) {
         </section>
 
         {activeTab === 'overview' && (
-          <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-950/40 p-4 text-xs text-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-800 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Today &amp; next up
               </h3>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
                 {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800/60 dark:bg-slate-900/60">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Today
                   </span>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-slate-600 dark:text-slate-500">
                     {trip && new Date(trip.startDate) <= new Date() && new Date(trip.endDate) >= new Date()
                       ? 'In this trip'
                       : 'Outside trip dates'}
@@ -1053,21 +1053,24 @@ async function handleImageChange(e: any) {
                       .filter((s) => new Date(s.startTime).toDateString() === new Date().toDateString())
                       .slice(0, 3)
                       .map((s) => (
-                        <li key={s.id} className="rounded-lg bg-slate-900/80 px-3 py-2">
+                        <li
+                          key={s.id}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/80"
+                        >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-semibold text-slate-50">
+                            <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">
                               {s.title || getSegmentMeta(s.type).label}
                             </span>
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
                               {renderTimeRange(s.startTime, s.endTime)}
                             </span>
                           </div>
                           {s.location && (
-                            <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                            <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                               <span className="truncate">{s.location}</span>
                               <button
                                 type="button"
-                                className="text-[10px] font-medium text-blue-400 hover:text-blue-300"
+                                className="text-[10px] font-medium text-blue-600 hover:text-blue-500 dark:text-blue-300 dark:hover:text-blue-200"
                                 onClick={() => {
                                   window.open(
                                     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -1085,37 +1088,37 @@ async function handleImageChange(e: any) {
                       ))}
                   </ul>
                 ) : (
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     No segments scheduled for today.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800/60 dark:bg-slate-900/60">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Next up
                   </span>
                 </div>
                 {nextSegment ? (
-                  <div className="space-y-1 rounded-lg bg-slate-900/80 px-3 py-2">
+                  <div className="space-y-1 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/80">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold text-slate-50">
+                      <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">
                         {nextSegment.title || getSegmentMeta(nextSegment.type).label}
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         {renderTimeRange(nextSegment.startTime, nextSegment.endTime)}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
                       {new Date(nextSegment.startTime).toLocaleString()}
                     </div>
                     {nextSegment.location && (
-                      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                         <span className="truncate">{nextSegment.location}</span>
                         <button
                           type="button"
-                          className="text-[10px] font-medium text-blue-400 hover:text-blue-300"
+                          className="text-[10px] font-medium text-blue-600 hover:text-blue-500 dark:text-blue-300 dark:hover:text-blue-200"
                           onClick={() => {
                             window.open(
                               `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -1131,7 +1134,7 @@ async function handleImageChange(e: any) {
                     )}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     No upcoming segments found.
                   </p>
                 )}
