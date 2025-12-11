@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getTrip, Trip, Segment, Attachment, SegmentDetails } from '../api/trips';
+import {
+  getTrip,
+  Trip,
+  Segment,
+  Attachment,
+  SegmentDetails,
+  TripShare,
+  listTripShares,
+  addTripShare,
+  removeTripShare,
+} from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { api, buildImageUrl } from '../api/client';
@@ -11,6 +21,7 @@ import {
   deleteSegmentAttachment,
 } from '../api/attachments';
 import { NavBar } from '../components/NavBar';
+import { getCurrentUser } from '../auth/token';
 
 type TripDetail = Awaited<ReturnType<typeof getTrip>>;
 
@@ -150,6 +161,7 @@ function getSegmentMeta(type: string) {
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,6 +200,14 @@ export default function TripDetailPage() {
   const [parsingEmailError, setParsingEmailError] = useState<string | null>(null);
   const [creatingFromEmail, setCreatingFromEmail] = useState(false);
   const [planningLoaded, setPlanningLoaded] = useState(false);
+  const [shares, setShares] = useState<TripShare[]>([]);
+  const [sharesLoading, setSharesLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [sharePermission, setSharePermission] = useState<'view' | 'edit'>('view');
+  const [shareSubmitting, setShareSubmitting] = useState(false);
+  const [removingShareId, setRemovingShareId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -215,6 +235,20 @@ export default function TripDetailPage() {
     load();
   }, [id]);
 
+  async function loadShares(tripId: string) {
+    try {
+      setSharesLoading(true);
+      const data = await listTripShares(tripId);
+      setShares(data);
+      setShareError(null);
+    } catch (err: any) {
+      console.error(err);
+      setShareError(err.message ?? 'Failed to load collaborators');
+    } finally {
+      setSharesLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!id) return;
     try {
@@ -240,6 +274,68 @@ export default function TripDetailPage() {
     }
     setPlanningLoaded(true);
   }, [id]);
+
+  const canManageSharing = useMemo(() => {
+    if (!trip) return false;
+    const isOwner = trip.userId && currentUser?.userId === trip.userId;
+    const hasOwnerPermission = trip.accessPermission === 'owner';
+    const isAdmin = currentUser?.role === 'admin';
+    return Boolean(isOwner || hasOwnerPermission || isAdmin);
+  }, [trip, currentUser]);
+
+  useEffect(() => {
+    if (trip && canManageSharing) {
+      loadShares(trip.id);
+      setSharePanelOpen(true);
+    }
+  }, [trip?.id, canManageSharing]);
+
+  async function handleAddShare(e: React.FormEvent) {
+    e.preventDefault();
+    if (!trip) return;
+    if (!shareEmail.trim()) {
+      setShareError('Enter an email to share with');
+      return;
+    }
+    try {
+      setShareSubmitting(true);
+      const newShare = await addTripShare(trip.id, {
+        email: shareEmail.trim(),
+        permission: sharePermission,
+      });
+      setShares((prev) => {
+        const existingIdx = prev.findIndex((s) => s.id === newShare.id);
+        if (existingIdx >= 0) {
+          const copy = [...prev];
+          copy[existingIdx] = newShare;
+          return copy;
+        }
+        return [...prev, newShare];
+      });
+      setShareEmail('');
+      setShareError(null);
+    } catch (err: any) {
+      console.error(err);
+      setShareError(err.message ?? 'Failed to share trip');
+    } finally {
+      setShareSubmitting(false);
+    }
+  }
+
+  async function handleRemoveShare(shareId: string) {
+    if (!trip) return;
+    try {
+      setRemovingShareId(shareId);
+      await removeTripShare(trip.id, shareId);
+      setShares((prev) => prev.filter((s) => s.id !== shareId));
+      setShareError(null);
+    } catch (err: any) {
+      console.error(err);
+      setShareError(err.message ?? 'Failed to remove collaborator');
+    } finally {
+      setRemovingShareId(null);
+    }
+  }
 
   useEffect(() => {
     if (!id || !planningLoaded) return;
@@ -874,6 +970,16 @@ async function handleImageChange(e: any) {
                     />
                   </label>
 
+                  {canManageSharing && (
+                    <button
+                      type="button"
+                      onClick={() => setSharePanelOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/30 px-3 py-1 text-xs font-medium text-white backdrop-blur hover:bg-white/10"
+                    >
+                      Share trip {shares.length > 0 ? `(${shares.length})` : ''}
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={openSegmentForm}
@@ -900,6 +1006,120 @@ async function handleImageChange(e: any) {
             </div>
           </div>
         </section>
+
+        {(canManageSharing || shares.length > 0) && (
+          <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  Collaborators
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Share this trip with teammates and set their permissions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSharePanelOpen((prev) => !prev)}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              >
+                {sharePanelOpen ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {shareError && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                {shareError}
+              </div>
+            )}
+
+            {sharePanelOpen && (
+              <div className="mt-3 space-y-3">
+                {canManageSharing && (
+                  <form onSubmit={handleAddShare} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          User email
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={shareEmail}
+                          onChange={(e) => setShareEmail(e.target.value)}
+                          placeholder="someone@example.com"
+                          className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800 outline-none ring-blue-500/50 focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                      </div>
+                      <div className="w-full sm:w-40">
+                        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Permission
+                        </label>
+                        <select
+                          value={sharePermission}
+                          onChange={(e) => setSharePermission(e.target.value as 'view' | 'edit')}
+                          className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800 outline-none ring-blue-500/50 focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        >
+                          <option value="view">View only</option>
+                          <option value="edit">Edit</option>
+                        </select>
+                      </div>
+                      <div className="self-end">
+                        <button
+                          type="submit"
+                          disabled={shareSubmitting}
+                          className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                        >
+                          {shareSubmitting ? 'Sharing...' : 'Share'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-2">
+                  {sharesLoading && <div className="text-xs text-slate-500 dark:text-slate-400">Loading collaborators…</div>}
+                  {!sharesLoading && shares.length === 0 && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      No collaborators yet.
+                    </div>
+                  )}
+                  {!sharesLoading &&
+                    shares.map((share) => (
+                      <div
+                        key={share.id}
+                        className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white/90 p-3 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                              {share.user.email}
+                            </span>
+                            <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                              {share.permission}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Role: {share.user.role} · Status: {share.user.status} · Joined {new Date(share.user.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        {canManageSharing && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveShare(share.id)}
+                            disabled={removingShareId === share.id}
+                            className="inline-flex items-center rounded-full border border-rose-200 px-3 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900/60 dark:text-rose-200 dark:hover:bg-rose-900/30"
+                          >
+                            {removingShareId === share.id ? 'Removing...' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Trip tabs */}
         <section className="mt-3 flex items-center justify-between">

@@ -17,6 +17,8 @@ export type Trip = {
   notes?: string | null;
   imagePath?: string | null;
   attachments?: Attachment[] | null;
+  userId?: string;
+  accessPermission?: 'owner' | 'edit' | 'view';
 };
 
 export type SegmentDetails = {
@@ -40,6 +42,18 @@ export type Segment = {
   passengerName?: string | null;
   details?: SegmentDetails | string | null;
   attachments?: Attachment[] | null;
+};
+
+export type TripShare = {
+  id: string;
+  permission: 'owner' | 'edit' | 'view';
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+    createdAt: string;
+  };
 };
 
 export async function listTrips() {
@@ -82,6 +96,23 @@ export async function updateTrip(
 
 export async function deleteTrip(id: string) {
   return api<void>(`/trips/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export function listTripShares(tripId: string) {
+  return api<TripShare[]>(`/trips/${tripId}/shares`);
+}
+
+export function addTripShare(tripId: string, payload: { userId?: string; email?: string; permission: 'view' | 'edit' }) {
+  return api<TripShare>(`/trips/${tripId}/shares`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function removeTripShare(tripId: string, shareId: string) {
+  return api<void>(`/trips/${tripId}/shares/${shareId}`, {
     method: 'DELETE',
   });
 }

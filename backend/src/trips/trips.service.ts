@@ -117,7 +117,11 @@ export class TripsService {
       },
     });
 
-    return trip;
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
+
+    return { ...trip, accessPermission: access.permission };
   }
 
   createTrip(userId: string, dto: CreateTripDto) {
@@ -232,24 +236,33 @@ export class TripsService {
     userId: string,
     userRole: UserRole,
     tripId: string,
-    targetUserId: string,
-    permission: TripPermission,
+    payload: { targetUserId?: string; email?: string; permission: TripPermission },
   ) {
     const trip = await this.assertPermission(tripId, userId, userRole, TripPermission.owner);
 
-    if (trip.userId === targetUserId) {
-      throw new ForbiddenException('Owner already has full access');
+    if (payload.permission === TripPermission.owner) {
+      throw new ForbiddenException('Cannot assign owner permission');
     }
 
-    const targetUser = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    const targetUser =
+      payload.targetUserId
+        ? await this.prisma.user.findUnique({ where: { id: payload.targetUserId } })
+        : payload.email
+          ? await this.prisma.user.findUnique({ where: { email: payload.email } })
+          : null;
+
     if (!targetUser) {
       throw new NotFoundException('User not found');
     }
 
+    if (trip.userId === targetUser.id) {
+      throw new ForbiddenException('Owner already has full access');
+    }
+
     return this.prisma.tripShare.upsert({
-      where: { tripId_userId: { tripId, userId: targetUserId } },
-      create: { tripId, userId: targetUserId, permission },
-      update: { permission },
+      where: { tripId_userId: { tripId, userId: targetUser.id } },
+      create: { tripId, userId: targetUser.id, permission: payload.permission },
+      update: { permission: payload.permission },
       include: {
         user: { select: { id: true, email: true, role: true, status: true, createdAt: true } },
       },

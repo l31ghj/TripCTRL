@@ -142,7 +142,11 @@ export class TripsController {
 
   @Post(':id/shares')
   addShare(@Req() req: any, @Param('id') id: string, @Body() dto: ShareTripDto) {
-    return this.trips.addShare(req.user.userId, req.user.role, id, dto.userId, dto.permission);
+    return this.trips.addShare(req.user.userId, req.user.role, id, {
+      targetUserId: dto.userId,
+      email: dto.email,
+      permission: dto.permission,
+    });
   }
 
   @Delete(':id/shares/:shareId')
