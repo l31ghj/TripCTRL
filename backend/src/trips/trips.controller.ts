@@ -20,6 +20,7 @@ import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ShareTripDto } from './dto/share-trip.dto';
+import { UpdatePlanningDto } from './dto/update-planning.dto';
 
 function tripImageStorage() {
   return diskStorage({
@@ -152,5 +153,15 @@ export class TripsController {
   @Delete(':id/shares/:shareId')
   removeShare(@Req() req: any, @Param('id') id: string, @Param('shareId') shareId: string) {
     return this.trips.removeShare(req.user.userId, req.user.role, id, shareId);
+  }
+
+  @Get(':id/planning')
+  getPlanning(@Req() req: any, @Param('id') id: string) {
+    return this.trips.getPlanning(req.user.userId, req.user.role, id);
+  }
+
+  @Put(':id/planning')
+  updatePlanning(@Req() req: any, @Param('id') id: string, @Body() dto: UpdatePlanningDto) {
+    return this.trips.updatePlanning(req.user.userId, req.user.role, id, dto.planning);
   }
 }

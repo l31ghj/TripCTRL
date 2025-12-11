@@ -10,6 +10,8 @@ import {
   listTripShares,
   addTripShare,
   removeTripShare,
+  getTripPlanning,
+  saveTripPlanning,
 } from '../api/trips';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
@@ -251,28 +253,23 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    try {
-      const raw = localStorage.getItem(`trip_planning_${id}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (
-          parsed &&
-          Array.isArray(parsed.packing) &&
-          Array.isArray(parsed.ideas) &&
-          Array.isArray(parsed.tasks)
-        ) {
-          setPlanning({
-            packing: parsed.packing ?? [],
-            ideas: parsed.ideas ?? [],
-            tasks: parsed.tasks ?? [],
-            notes: parsed.notes ?? '',
-          });
-        }
+    setPlanningLoaded(false);
+    (async () => {
+      try {
+        const res = await getTripPlanning(id);
+        const data = res.planning || {};
+        setPlanning({
+          packing: Array.isArray(data.packing) ? data.packing : [],
+          ideas: Array.isArray(data.ideas) ? data.ideas : [],
+          tasks: Array.isArray(data.tasks) ? data.tasks : [],
+          notes: typeof data.notes === 'string' ? data.notes : '',
+        });
+      } catch (err) {
+        console.error('Failed to load planning data', err);
+      } finally {
+        setPlanningLoaded(true);
       }
-    } catch (err) {
-      console.error('Failed to load planning data', err);
-    }
-    setPlanningLoaded(true);
+    })();
   }, [id]);
 
   const canManageSharing = useMemo(() => {
@@ -283,12 +280,28 @@ export default function TripDetailPage() {
     return Boolean(isOwner || hasOwnerPermission || isAdmin);
   }, [trip, currentUser]);
 
+  const canEditTrip = useMemo(() => {
+    if (!trip) return false;
+    const isAdmin = currentUser?.role === 'admin';
+    if (isAdmin) return true;
+    if (trip.userId && currentUser?.userId === trip.userId) return true;
+    return trip.accessPermission === 'owner' || trip.accessPermission === 'edit';
+  }, [trip, currentUser]);
+
   useEffect(() => {
     if (trip && canManageSharing) {
       loadShares(trip.id);
       setSharePanelOpen(true);
     }
   }, [trip?.id, canManageSharing]);
+
+  useEffect(() => {
+    if (!trip || !planningLoaded || !canEditTrip) return;
+    const timer = setTimeout(() => {
+      saveTripPlanning(trip.id, planning).catch((err) => console.error('Failed to save planning', err));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [planning, trip, planningLoaded, canEditTrip]);
 
   async function handleAddShare(e: React.FormEvent) {
     e.preventDefault();
@@ -336,15 +349,6 @@ export default function TripDetailPage() {
       setRemovingShareId(null);
     }
   }
-
-  useEffect(() => {
-    if (!id || !planningLoaded) return;
-    try {
-      localStorage.setItem(`trip_planning_${id}`, JSON.stringify(planning));
-    } catch (err) {
-      console.error('Failed to persist planning data', err);
-    }
-  }, [planning, id, planningLoaded]);
 
   const sortedSegments = useMemo(() => {
     if (!trip?.segments) return [];
@@ -407,6 +411,7 @@ export default function TripDetailPage() {
   }
 
   function addPlanningItem(list: keyof PlanningData, text: string) {
+    if (!canEditTrip) return;
     if (!text.trim()) return;
     const id =
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -425,6 +430,7 @@ export default function TripDetailPage() {
   }
 
   function togglePlanningItem(list: keyof PlanningData, itemId: string) {
+    if (!canEditTrip) return;
     setPlanning((prev) => ({
       ...prev,
       [list]: prev[list].map((item) =>
@@ -434,6 +440,7 @@ export default function TripDetailPage() {
   }
 
   function removePlanningItem(list: keyof PlanningData, itemId: string) {
+    if (!canEditTrip) return;
     setPlanning((prev) => ({
       ...prev,
       [list]: prev[list].filter((item) => item.id !== itemId),
@@ -445,6 +452,7 @@ export default function TripDetailPage() {
   }
 
   function handleNotesChange(value: string) {
+    if (!canEditTrip) return;
     setPlanning((prev) => ({ ...prev, notes: value }));
   }
 
@@ -705,7 +713,7 @@ export default function TripDetailPage() {
   
   async function handleSegmentSubmit(e: any) {
     e.preventDefault();
-    if (!id) return;
+    if (!id || !canEditTrip) return;
 
     if (!segmentForm.startTime && segmentForm.type !== 'note') {
       setSegmentError('Start time is required.');
@@ -778,6 +786,7 @@ export default function TripDetailPage() {
   }
 
   function handleEditSegment(seg: Segment) {
+    if (!canEditTrip) return;
     setEditingSegmentId(seg.id);
     setShowSegmentForm(true);
     setSegmentForm({
@@ -808,6 +817,7 @@ export default function TripDetailPage() {
   }
 
   async function handleDeleteSegment(seg: Segment) {
+    if (!canEditTrip) return;
     if (!id) return;
     if (!confirm('Delete this segment?')) return;
     try {
@@ -959,16 +969,18 @@ async function handleImageChange(e: any) {
                 </div>
                 
                 <div className="flex flex-col items-end gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
-                    <span>{uploadingImage ? 'Uploading...' : 'Change cover'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageChange}
-                      disabled={uploadingImage}
-                    />
-                  </label>
+                  {canEditTrip && (
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20">
+                      <span>{uploadingImage ? 'Uploading...' : 'Change cover'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  )}
 
                   {canManageSharing && (
                     <button
@@ -980,18 +992,21 @@ async function handleImageChange(e: any) {
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={openSegmentForm}
-                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-400"
-                  >
-                    + Add segment
-                  </button>
+                  {canEditTrip && (
+                    <button
+                      type="button"
+                      onClick={openSegmentForm}
+                      className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-400"
+                    >
+                      + Add segment
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => setTripFormOpen(true)}
                     className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur hover:bg-white/20"
+                    style={{ display: canEditTrip ? 'inline-flex' : 'none' }}
                   >
                     ✏️ Edit details
                   </button>
@@ -1369,27 +1384,29 @@ async function handleImageChange(e: any) {
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Attachments
               </h3>
-              <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-                {uploadingAttachmentTrip ? 'Uploading...' : 'Attach file'}
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={async (e) => {
-                    if (!trip || !id || !e.target.files?.[0]) return;
-                    try {
-                      setUploadingAttachmentTrip(true);
-                      await uploadTripAttachment(id, e.target.files[0]);
-                      const fresh = await getTrip(id);
-                      setTrip(fresh);
-                    } catch (err) {
-                      console.error(err);
-                    } finally {
-                      setUploadingAttachmentTrip(false);
-                      e.target.value = '';
-                    }
-                  }}
-                />
-              </label>
+              {canEditTrip && (
+                <label className="cursor-pointer text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                  {uploadingAttachmentTrip ? 'Uploading...' : 'Attach file'}
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (!trip || !id || !e.target.files?.[0]) return;
+                      try {
+                        setUploadingAttachmentTrip(true);
+                        await uploadTripAttachment(id, e.target.files[0]);
+                        const fresh = await getTrip(id);
+                        setTrip(fresh);
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        setUploadingAttachmentTrip(false);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                </label>
+              )}
             </div>
             {Array.isArray(trip.attachments) &&
             trip.attachments.length > 0 ? (
@@ -1404,23 +1421,25 @@ async function handleImageChange(e: any) {
                     >
                       {att.originalName}
                     </a>
-                    <button
-                      type="button"
-                      className="text-[10px] text-slate-400 hover:text-red-500"
-                      onClick={async () => {
-                        if (!id) return;
-                        if (!confirm('Delete this attachment?')) return;
-                        try {
-                          await deleteTripAttachment(id, att.id);
-                          const fresh = await getTrip(id);
-                          setTrip(fresh);
-                        } catch (err) {
-                          console.error(err);
-                        }
-                      }}
-                    >
-                      Remove
-                    </button>
+                    {canEditTrip && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-slate-400 hover:text-red-500"
+                        onClick={async () => {
+                          if (!id) return;
+                          if (!confirm('Delete this attachment?')) return;
+                          try {
+                            await deleteTripAttachment(id, att.id);
+                            const fresh = await getTrip(id);
+                            setTrip(fresh);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -1540,7 +1559,7 @@ async function handleImageChange(e: any) {
                   Planning
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Keep packing lists, ideas, and pre-trip tasks in one place. Saved to this browser.
+                  Keep packing lists, ideas, and pre-trip tasks in one place. Shared with collaborators.
                 </p>
               </div>
               <div className="text-[11px] text-slate-400">
@@ -1585,10 +1604,16 @@ async function handleImageChange(e: any) {
 
                     {!collapsed && (
                       <>
-                        <PlanningInput
-                          placeholder={placeholder}
-                          onAdd={(text) => addPlanningItem(key, text)}
-                        />
+                        {canEditTrip ? (
+                          <PlanningInput
+                            placeholder={placeholder}
+                            onAdd={(text) => addPlanningItem(key, text)}
+                          />
+                        ) : (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            View only — shared by the owner.
+                          </p>
+                        )}
                         {planning[key].length === 0 ? (
                           <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             Nothing here yet.
@@ -1605,19 +1630,22 @@ async function handleImageChange(e: any) {
                                     type="checkbox"
                                     className="mt-0.5"
                                     checked={item.done}
+                                    disabled={!canEditTrip}
                                     onChange={() => togglePlanningItem(key, item.id)}
                                   />
                                   <span className={item.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}>
                                     {item.text}
                                   </span>
                                 </label>
-                                <button
-                                  type="button"
-                                  className="text-[11px] text-slate-400 hover:text-red-500"
-                                  onClick={() => removePlanningItem(key, item.id)}
-                                >
-                                  Remove
-                                </button>
+                                {canEditTrip && (
+                                  <button
+                                    type="button"
+                                    className="text-[11px] text-slate-400 hover:text-red-500"
+                                    onClick={() => removePlanningItem(key, item.id)}
+                                  >
+                                    Remove
+                                  </button>
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -1646,6 +1674,8 @@ async function handleImageChange(e: any) {
                     className="h-28 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
                     value={planning.notes}
                     onChange={(e) => handleNotesChange(e.target.value)}
+                    readOnly={!canEditTrip}
+                    disabled={!canEditTrip}
                     placeholder="Quick notes, ideas, or reminders"
                   />
                 </div>
@@ -1840,27 +1870,29 @@ async function handleImageChange(e: any) {
                                         </div>
                                       )}
                                       <div className="mt-1 flex items-start justify-between text-[11px] text-slate-400 dark:text-slate-400">
-                                        <label className="cursor-pointer hover:underline">
-                                          {uploadingAttachmentSegmentId === s.id ? 'Uploading...' : 'Attach file'}
-                                          <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={async (e) => {
-                                              if (!trip || !id || !e.target.files?.[0]) return;
-                                              try {
-                                                setUploadingAttachmentSegmentId(s.id);
-                                                await uploadSegmentAttachment(s.id, e.target.files[0]);
-                                                const fresh = await getTrip(id);
-                                                setTrip(fresh);
-                                              } catch (err) {
-                                                console.error(err);
-                                              } finally {
-                                                setUploadingAttachmentSegmentId(null);
-                                                e.target.value = '';
-                                              }
-                                            }}
-                                          />
-                                        </label>
+                                        {canEditTrip && (
+                                          <label className="cursor-pointer hover:underline">
+                                            {uploadingAttachmentSegmentId === s.id ? 'Uploading...' : 'Attach file'}
+                                            <input
+                                              type="file"
+                                              className="hidden"
+                                              onChange={async (e) => {
+                                                if (!trip || !id || !e.target.files?.[0]) return;
+                                                try {
+                                                  setUploadingAttachmentSegmentId(s.id);
+                                                  await uploadSegmentAttachment(s.id, e.target.files[0]);
+                                                  const fresh = await getTrip(id);
+                                                  setTrip(fresh);
+                                                } catch (err) {
+                                                  console.error(err);
+                                                } finally {
+                                                  setUploadingAttachmentSegmentId(null);
+                                                  e.target.value = '';
+                                                }
+                                              }}
+                                            />
+                                          </label>
+                                        )}
                                         <div className="ml-2 flex-1 text-right">
                                           {Array.isArray(s.attachments) && s.attachments.length > 0 && (
                                             <ul className="space-y-1">
@@ -1874,26 +1906,28 @@ async function handleImageChange(e: any) {
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="truncate text-[10px] text-blue-600 hover:underline dark:text-blue-400"
-                                                  >
-                                                    {att.originalName}
-                                                  </a>
-                                                  <button
-                                                    type="button"
-                                                    className="text-[10px] text-slate-400 hover:text-red-500"
-                                                    onClick={async () => {
-                                                      if (!id) return;
-                                                      if (!confirm('Delete this attachment?')) return;
-                                                      try {
-                                                        await deleteSegmentAttachment(s.id, att.id);
-                                                        const fresh = await getTrip(id);
-                                                        setTrip(fresh);
-                                                      } catch (err) {
-                                                        console.error(err);
-                                                      }
-                                                    }}
-                                                  >
-                                                    Remove
-                                                  </button>
+                                              >
+                                                {att.originalName}
+                                              </a>
+                                              {canEditTrip && (
+                                                <button
+                                                  type="button"
+                                                  className="text-[10px] text-slate-400 hover:text-red-500"
+                                                  onClick={async () => {
+                                                    if (!id) return;
+                                                    if (!confirm('Delete this attachment?')) return;
+                                                    try {
+                                                      await deleteSegmentAttachment(s.id, att.id);
+                                                      const fresh = await getTrip(id);
+                                                      setTrip(fresh);
+                                                    } catch (err) {
+                                                      console.error(err);
+                                                    }
+                                                  }}
+                                                >
+                                                  Remove
+                                                </button>
+                                              )}
                                                 </li>
                                               ))}
                                             </ul>
@@ -1925,22 +1959,24 @@ async function handleImageChange(e: any) {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditSegment(s)}
-                                    className="rounded-full px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteSegment(s)}
-                                    className="rounded-full px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
+                                {canEditTrip && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditSegment(s)}
+                                      className="rounded-full px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteSegment(s)}
+                                      className="rounded-full px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -2182,7 +2218,8 @@ async function handleImageChange(e: any) {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+                  disabled={!canEditTrip}
+                  className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400 dark:bg-blue-500 dark:hover:bg-blue-400"
                 >
                   {editingSegmentId ? 'Update segment' : 'Add segment'}
                 </button>

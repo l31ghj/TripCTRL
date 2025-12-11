@@ -133,6 +133,7 @@ export class TripsService {
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         notes: dto.notes,
+        planning: {},
       },
     });
   }
@@ -218,6 +219,30 @@ export class TripsService {
     ]);
 
     return { success: true };
+  }
+
+  async getPlanning(userId: string, userRole: UserRole, tripId: string) {
+    await this.assertPermission(tripId, userId, userRole, TripPermission.view);
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { planning: true },
+    });
+    if (!trip) throw new NotFoundException('Trip not found');
+    return { planning: trip.planning ?? {} };
+  }
+
+  async updatePlanning(
+    userId: string,
+    userRole: UserRole,
+    tripId: string,
+    planning: Record<string, any>,
+  ) {
+    await this.assertPermission(tripId, userId, userRole, TripPermission.edit);
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: { planning },
+    });
+    return { planning };
   }
 
   async listShares(userId: string, userRole: UserRole, tripId: string) {

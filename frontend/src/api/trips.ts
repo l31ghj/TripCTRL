@@ -19,6 +19,7 @@ export type Trip = {
   attachments?: Attachment[] | null;
   userId?: string;
   accessPermission?: 'owner' | 'edit' | 'view';
+  planning?: Record<string, any> | null;
 };
 
 export type SegmentDetails = {
@@ -114,5 +115,16 @@ export function addTripShare(tripId: string, payload: { userId?: string; email?:
 export function removeTripShare(tripId: string, shareId: string) {
   return api<void>(`/trips/${tripId}/shares/${shareId}`, {
     method: 'DELETE',
+  });
+}
+
+export function getTripPlanning(tripId: string) {
+  return api<{ planning: Record<string, any> }>(`/trips/${tripId}/planning`);
+}
+
+export function saveTripPlanning(tripId: string, planning: Record<string, any>) {
+  return api<{ planning: Record<string, any> }>(`/trips/${tripId}/planning`, {
+    method: 'PUT',
+    body: JSON.stringify({ planning }),
   });
 }
