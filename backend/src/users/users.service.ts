@@ -18,6 +18,12 @@ export class UsersService {
     return this.prisma.user.count();
   }
 
+  countActiveAdmins() {
+    return this.prisma.user.count({
+      where: { role: UserRole.admin, status: UserStatus.active },
+    });
+  }
+
   create(email: string, passwordHash: string, options?: { role?: UserRole; status?: UserStatus }) {
     return this.prisma.user.create({
       data: {

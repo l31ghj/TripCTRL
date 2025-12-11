@@ -38,8 +38,23 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
+    // If migrating existing users, default missing status to active to avoid lockout
+    if (!user.status) {
+      await this.users.updateStatus(user.id, UserStatus.active);
+      user.status = UserStatus.active;
+    }
+
     if (user.status === UserStatus.pending) {
-      throw new UnauthorizedException('Account pending approval');
+      const activeAdmins = await this.users.countActiveAdmins();
+      // Safety valve: if no active admins exist, promote/activate this user so the system is not locked out
+      if (activeAdmins === 0) {
+        await this.users.updateStatus(user.id, UserStatus.active);
+        await this.users.updateRole(user.id, UserRole.admin);
+        user.status = UserStatus.active;
+        user.role = UserRole.admin;
+      } else {
+        throw new UnauthorizedException('Account pending approval');
+      }
     }
     if (user.status === UserStatus.rejected) {
       throw new UnauthorizedException('Account rejected');
