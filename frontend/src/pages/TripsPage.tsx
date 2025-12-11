@@ -111,6 +111,11 @@ export function TripsPage() {
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Add a new itinerary with dates and an optional main location.
               </p>
+              {isViewOnly && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Shared with you in view-only mode; creation is disabled.
+                </p>
+              )}
             </div>
             <button
               type="button"

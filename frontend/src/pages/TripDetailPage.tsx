@@ -943,6 +943,11 @@ async function handleImageChange(e: any) {
                             : 'View only'}
                       </span>
                     )}
+                    {trip.userId && currentUser?.userId !== trip.userId && currentUser?.email && (
+                      <span className="rounded-full border border-white/30 px-3 py-1 text-[11px] font-medium text-white/80 backdrop-blur">
+                        Shared by owner
+                      </span>
+                    )}
                     {statusLabel && (
                       <span
                         className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium backdrop-blur ${statusClass}`}
@@ -1570,6 +1575,11 @@ async function handleImageChange(e: any) {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Keep packing lists, ideas, and pre-trip tasks in one place. Shared with collaborators.
                 </p>
+                {!canEditTrip && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    You have view-only access; editing is disabled.
+                  </p>
+                )}
               </div>
               <div className="text-[11px] text-slate-400">
                 Trip: {trip.title}
