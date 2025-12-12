@@ -22,19 +22,19 @@ export class SettingsController {
   async getStatus() {
     const fromEnv = process.env.AERODATABOX_API_KEY;
     if (fromEnv) {
-      return { hasKey: true, source: 'env' };
+      return { hasKey: true, source: 'env', enabled: true };
     }
     const val = await this.settings.get('AERODATABOX_API_KEY');
-    return { hasKey: !!val, source: val ? 'db' : null };
+    return { hasKey: !!val, source: val ? 'db' : null, enabled: !!val };
   }
 
   @Put()
   async update(@Body() dto: UpdateFlightApiKeyDto) {
     if (!dto.apiKey) {
       await this.settings.delete('AERODATABOX_API_KEY');
-      return { saved: false, hasKey: false };
+      return { saved: false, hasKey: false, enabled: false };
     }
     await this.settings.set('AERODATABOX_API_KEY', dto.apiKey);
-    return { saved: true, hasKey: true, source: 'db' };
+    return { saved: true, hasKey: true, source: 'db', enabled: true };
   }
 }

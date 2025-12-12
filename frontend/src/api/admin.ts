@@ -27,7 +27,7 @@ export function updateUserRole(userId: string, role: 'admin' | 'manager' | 'memb
 }
 
 export function getFlightApiKeyStatus() {
-  return api<{ hasKey: boolean; source: 'env' | 'db' | null }>(`/admin/flight-api-key`);
+  return api<{ hasKey: boolean; source: 'env' | 'db' | null; enabled: boolean }>(`/admin/flight-api-key`);
 }
 
 export function setFlightApiKey(apiKey?: string) {

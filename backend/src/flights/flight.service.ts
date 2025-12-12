@@ -30,8 +30,8 @@ type AeroFlight = {
 @Injectable()
 export class FlightService {
   private readonly logger = new Logger(FlightService.name);
-  private readonly baseUrl = process.env.AERODATABOX_BASE_URL || 'https://aerodatabox.p.rapidapi.com';
-  private readonly apiHost = process.env.AERODATABOX_API_HOST || 'aerodatabox.p.rapidapi.com';
+  // Default to API Market endpoint
+  private readonly baseUrl = process.env.AERODATABOX_BASE_URL || 'https://apimarket.aerodatabox.com';
 
   constructor(private settings: SettingsService) {}
 
@@ -51,8 +51,7 @@ export class FlightService {
     const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}/${date}?withLeg=true`;
     const res = await fetch(url, {
       headers: {
-        'X-RapidAPI-Key': apiKey,
-        'X-RapidAPI-Host': this.apiHost,
+        'X-Api-Key': apiKey,
       },
     });
 

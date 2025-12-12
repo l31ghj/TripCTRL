@@ -35,7 +35,7 @@ export function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
-  const [apiKeyStatus, setApiKeyStatus] = useState<{ hasKey: boolean; source: string | null } | null>(null);
+  const [apiKeyStatus, setApiKeyStatus] = useState<{ hasKey: boolean; source: string | null; enabled: boolean } | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
 
@@ -185,6 +185,17 @@ export function AdminUsersPage() {
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             Note: Environment variable AERODATABOX_API_KEY takes precedence if set on the server.
           </p>
+          <div className="mt-2 flex items-center gap-2 text-[11px]">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
+                apiKeyStatus?.enabled
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100'
+                  : 'border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100'
+              }`}
+            >
+              {apiKeyStatus?.enabled ? 'Flight sync enabled' : 'Flight sync disabled (no key)'}
+            </span>
+          </div>
         </section>
 
         {error && (
