@@ -77,7 +77,10 @@ export class TripsService {
             },
           },
           orderBy: { startDate: 'asc' },
-          include: { shares: { where: { userId }, select: { permission: true } } },
+          include: {
+            shares: { where: { userId }, select: { permission: true } },
+            user: { select: { id: true, email: true } },
+          },
         })
         .then((trips) =>
           trips.map((trip) => {
@@ -85,6 +88,7 @@ export class TripsService {
             return {
               ...rest,
               accessPermission: trip.shares[0]?.permission ?? TripPermission.view,
+              owner: trip.user,
             };
           }),
         );
@@ -93,6 +97,7 @@ export class TripsService {
     if (userRole === UserRole.admin) {
       return this.prisma.trip.findMany({
         orderBy: { startDate: 'asc' },
+        include: { user: { select: { id: true, email: true } } },
       });
     }
 
@@ -111,7 +116,10 @@ export class TripsService {
           ],
         },
         orderBy: { startDate: 'asc' },
-        include: { shares: { where: { userId }, select: { permission: true } } },
+        include: {
+          shares: { where: { userId }, select: { permission: true } },
+          user: { select: { id: true, email: true } },
+        },
       })
       .then((trips) =>
         trips.map((trip) => {
@@ -120,6 +128,7 @@ export class TripsService {
             ...rest,
             accessPermission:
               trip.userId === userId ? TripPermission.owner : trip.shares[0]?.permission ?? TripPermission.view,
+            owner: trip.user,
           };
         }),
       );
@@ -136,6 +145,7 @@ export class TripsService {
       include: {
         segments: { orderBy: { startTime: 'asc' }, include: { attachments: true } },
         attachments: true,
+        user: { select: { id: true, email: true } },
       },
     });
 
@@ -143,7 +153,7 @@ export class TripsService {
       throw new NotFoundException('Trip not found');
     }
 
-    return { ...trip, accessPermission: access.permission };
+    return { ...trip, accessPermission: access.permission, owner: trip.user };
   }
 
   createTrip(userId: string, dto: CreateTripDto) {

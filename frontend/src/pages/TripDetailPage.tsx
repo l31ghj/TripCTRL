@@ -979,6 +979,12 @@ async function handleImageChange(e: any) {
                         <span>{sortedSegments.length} segments</span>
                       </span>
                     )}
+                    {trip.owner && currentUser?.userId !== trip.owner.id && (
+                      <span className="inline-flex items-center gap-1">
+                        <span>Owner:</span>
+                        <span className="font-semibold">{trip.owner.email}</span>
+                      </span>
+                    )}
                   </p>
                 </div>
                 

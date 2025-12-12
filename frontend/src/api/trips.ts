@@ -20,6 +20,7 @@ export type Trip = {
   userId?: string;
   accessPermission?: 'owner' | 'edit' | 'view';
   planning?: Record<string, any> | null;
+  owner?: { id: string; email: string };
 };
 
 export type SegmentDetails = {

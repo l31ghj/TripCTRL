@@ -295,7 +295,7 @@ export function TripsPage() {
                                 </span>
                                 {!isOwner && (
                                   <span className="truncate">
-                                    Shared with you
+                                    Shared with you{trip.owner?.email ? ` by ${trip.owner.email}` : ''}
                                   </span>
                                 )}
                               </div>
