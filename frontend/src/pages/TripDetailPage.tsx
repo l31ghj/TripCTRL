@@ -1011,6 +1011,13 @@ async function handleImageChange(e: any) {
                       Share trip {shares.length > 0 ? `(${shares.length})` : ''}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/trips/${trip.id}/print`, '_blank')}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/30 px-3 py-1 text-xs font-medium text-white backdrop-blur hover:bg-white/10"
+                  >
+                    Print / PDF
+                  </button>
 
                   {canEditTrip && (
                     <button

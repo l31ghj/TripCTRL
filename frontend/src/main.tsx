@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { TripsPage } from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { TripPrintPage } from './pages/TripPrintPage';
 import { getCurrentUser } from './auth/token';
 import './index.css';
 
@@ -24,6 +25,10 @@ const App = () => {
         <Route
           path="/trips/:id"
           element={isAuthed ? <TripDetailPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/trips/:id/print"
+          element={isAuthed ? <TripPrintPage /> : <Navigate to="/login" />}
         />
         <Route
           path="/admin/users"
