@@ -13,6 +13,7 @@ import {
   getTripPlanning,
   saveTripPlanning,
 } from '../api/trips';
+import { lookupFlight } from '../api/flights';
 import { createSegment, deleteSegment, updateSegment } from '../api/segments';
 import { uploadTripImage } from '../api/upload';
 import { api, buildImageUrl } from '../api/client';
@@ -43,6 +44,8 @@ type SegmentFormState = {
   seatNumber: string;
   passengerName: string;
   activityNotes: string;
+  departureAirport: string;
+  arrivalAirport: string;
 };
 
 type TripFormState = {
@@ -90,6 +93,8 @@ const emptySegmentForm: SegmentFormState = {
   seatNumber: '',
   passengerName: '',
   activityNotes: '',
+  departureAirport: '',
+  arrivalAirport: '',
 };
 
 function toLocalInputValue(iso: string) {
@@ -192,6 +197,8 @@ export default function TripDetailPage() {
   const [uploadingAttachmentTrip, setUploadingAttachmentTrip] = useState(false);
   const [uploadingAttachmentSegmentId, setUploadingAttachmentSegmentId] =
     useState<string | null>(null);
+  const [flightLookupLoading, setFlightLookupLoading] = useState(false);
+  const [flightLookupError, setFlightLookupError] = useState<string | null>(null);
 
   const [tripForm, setTripForm] = useState<TripFormState>(emptyTripForm);
   const [tripFormOpen, setTripFormOpen] = useState(false);
@@ -308,6 +315,50 @@ export default function TripDetailPage() {
       setSharePanelOpen(true);
     }
   }, [trip?.id, canManageSharing]);
+
+  useEffect(() => {
+    if (
+      segmentForm.type !== 'transport' ||
+      segmentForm.transportMode !== 'flight' ||
+      !segmentForm.flightNumber ||
+      !segmentForm.startTime
+    ) {
+      setFlightLookupError(null);
+      return;
+    }
+    const flightDate = segmentForm.startTime.slice(0, 10);
+    if (flightDate.length !== 10) return;
+    const timer = setTimeout(async () => {
+      try {
+        setFlightLookupLoading(true);
+        const res = await lookupFlight(segmentForm.flightNumber, flightDate);
+        if (!res.found || !res.data) {
+          setFlightLookupError('Flight not found');
+          return;
+        }
+        setFlightLookupError(null);
+        const depUtc = res.data.flightDeparture?.scheduledTimeUtc || res.data.flightDeparture?.actualTimeUtc;
+        const arrUtc = res.data.flightArrival?.scheduledTimeUtc || res.data.flightArrival?.actualTimeUtc;
+        const depLocal = depUtc ? toLocalInputValue(depUtc) : segmentForm.startTime;
+        const arrLocal = arrUtc ? toLocalInputValue(arrUtc) : segmentForm.endTime;
+        setSegmentForm((prev) => ({
+          ...prev,
+          startTime: depLocal,
+          endTime: arrLocal,
+          provider: res.data.flightAirline || prev.provider,
+          location: res.data.flightArrival?.airport?.name || prev.location,
+          departureAirport: res.data.flightDeparture?.airport?.iata || res.data.flightDeparture?.airport?.name || '',
+          arrivalAirport: res.data.flightArrival?.airport?.iata || res.data.flightArrival?.airport?.name || '',
+        }));
+      } catch (err: any) {
+        console.error(err);
+        setFlightLookupError(err.message ?? 'Lookup failed');
+      } finally {
+        setFlightLookupLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [segmentForm.flightNumber, segmentForm.startTime, segmentForm.transportMode, segmentForm.type]);
 
   useEffect(() => {
     if (!trip || !planningLoaded || !canEditTrip) return;
@@ -735,7 +786,11 @@ export default function TripDetailPage() {
     }
 
     const trimmedAddress = (segmentForm.location || '').trim();
+    const shouldValidateAddress =
+      segmentForm.type !== 'transport' ||
+      segmentForm.transportMode !== 'flight';
     if (
+      shouldValidateAddress &&
       trimmedAddress &&
       (trimmedAddress.length < 5 ||
         !/\d/.test(trimmedAddress) ||
@@ -775,7 +830,10 @@ export default function TripDetailPage() {
         title: segmentForm.title || undefined,
         startTime: toIso(startString),
         endTime: toIso(segmentForm.endTime),
-        location: segmentForm.location || undefined,
+        location:
+          segmentForm.type === 'transport' && segmentForm.transportMode === 'flight'
+            ? segmentForm.arrivalAirport || segmentForm.location || undefined
+            : segmentForm.location || undefined,
         provider: segmentForm.provider || undefined,
         confirmationCode: segmentForm.confirmationCode || undefined,
         flightNumber: segmentForm.flightNumber || undefined,
@@ -821,6 +879,12 @@ export default function TripDetailPage() {
       flightNumber: seg.flightNumber ?? '',
       seatNumber: seg.seatNumber ?? '',
       passengerName: seg.passengerName ?? '',
+      departureAirport:
+        seg.flightDeparture?.airport?.iata ||
+        seg.flightDeparture?.airport?.name ||
+        '',
+      arrivalAirport:
+        seg.flightArrival?.airport?.iata || seg.flightArrival?.airport?.name || '',
       activityNotes:
         typeof (seg as any).details === 'string'
           ? (seg as any).details
@@ -2203,144 +2267,228 @@ async function handleImageChange(e: any) {
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  {segmentForm.type === 'accommodation' ? 'Check-in time' : 'Start time'}
-                </label>
-                <input
-                  type="datetime-local"
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.startTime}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('startTime', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  {segmentForm.type === 'accommodation' ? 'Check-out time' : 'End time'}
-                </label>
-                <input
-                  type="datetime-local"
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.endTime}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('endTime', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Address
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.location}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('location', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Provider
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark;border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.provider}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('provider', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Confirmation code
-                </label>
-                <input
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  value={segmentForm.confirmationCode}
-                  onChange={(e) =>
-                    handleSegmentFieldChange(
-                      'confirmationCode',
-                      e.target.value,
-                    )
-                  }
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                  Activity notes / details
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                  rows={3}
-                  value={segmentForm.activityNotes}
-                  onChange={(e) =>
-                    handleSegmentFieldChange('activityNotes', e.target.value)
-                  }
-                  placeholder="Optional notes, booking info, or instructions for this activity"
-                />
-              </div>
-
-
-              {segmentForm.type === 'transport' &&
-                segmentForm.transportMode === 'flight' && (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Flight number
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.flightNumber}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'flightNumber',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="e.g. QF15"
-                      />
+              {segmentForm.type === 'transport' && segmentForm.transportMode === 'flight' ? (
+                <>
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Flight number
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.flightNumber}
+                      onChange={(e) =>
+                        handleSegmentFieldChange('flightNumber', e.target.value)
+                      }
+                      placeholder="e.g. QF15"
+                    />
+                    <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {flightLookupLoading && (
+                        <span className="text-blue-600 dark:text-blue-300">Looking up flight...</span>
+                      )}
+                      {!flightLookupLoading && flightLookupError && (
+                        <span className="text-red-600 dark:text-red-300">{flightLookupError}</span>
+                      )}
+                      {!flightLookupLoading &&
+                        !flightLookupError &&
+                        segmentForm.flightNumber &&
+                        !segmentForm.departureAirport &&
+                        !segmentForm.arrivalAirport && <span>Enter flight date/time to auto-fill schedule and airports.</span>}
+                      {!flightLookupLoading &&
+                        !flightLookupError &&
+                        (segmentForm.departureAirport || segmentForm.arrivalAirport) && (
+                          <span className="text-emerald-600 dark:text-emerald-300">Flight details loaded from AeroDataBox.</span>
+                        )}
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Seat number
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.seatNumber}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'seatNumber',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="e.g. 32A"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
-                        Passenger name
-                      </label>
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
-                        value={segmentForm.passengerName}
-                        onChange={(e) =>
-                          handleSegmentFieldChange(
-                            'passengerName',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Name on booking"
-                      />
-                    </div>
-                  </>
-                )}
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Airline
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.provider}
+                      onChange={(e) => handleSegmentFieldChange('provider', e.target.value)}
+                      placeholder="e.g. Qantas"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Departure airport
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.departureAirport}
+                      onChange={(e) =>
+                        handleSegmentFieldChange('departureAirport', e.target.value)
+                      }
+                      placeholder="e.g. LAX or Los Angeles"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Destination airport
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.arrivalAirport}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSegmentForm((prev) => ({
+                          ...prev,
+                          arrivalAirport: value,
+                          location:
+                            prev.type === 'transport' && prev.transportMode === 'flight'
+                              ? value || prev.location
+                              : prev.location,
+                        }));
+                      }}
+                      placeholder="e.g. JFK or New York"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Departure time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.startTime}
+                      onChange={(e) => handleSegmentFieldChange('startTime', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Arrival time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.endTime}
+                      onChange={(e) => handleSegmentFieldChange('endTime', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Confirmation code
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.confirmationCode}
+                      onChange={(e) => handleSegmentFieldChange('confirmationCode', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Seat number
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.seatNumber}
+                      onChange={(e) => handleSegmentFieldChange('seatNumber', e.target.value)}
+                      placeholder="e.g. 32A"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Passenger name
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.passengerName}
+                      onChange={(e) => handleSegmentFieldChange('passengerName', e.target.value)}
+                      placeholder="Name on booking"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Notes
+                    </label>
+                    <textarea
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      rows={3}
+                      value={segmentForm.activityNotes}
+                      onChange={(e) => handleSegmentFieldChange('activityNotes', e.target.value)}
+                      placeholder="Optional notes, booking info, or instructions for this flight"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      {segmentForm.type === 'accommodation' ? 'Check-in time' : 'Start time'}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.startTime}
+                      onChange={(e) => handleSegmentFieldChange('startTime', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      {segmentForm.type === 'accommodation' ? 'Check-out time' : 'End time'}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.endTime}
+                      onChange={(e) => handleSegmentFieldChange('endTime', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Address
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.location}
+                      onChange={(e) => handleSegmentFieldChange('location', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Provider
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.provider}
+                      onChange={(e) => handleSegmentFieldChange('provider', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Confirmation code
+                    </label>
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      value={segmentForm.confirmationCode}
+                      onChange={(e) => handleSegmentFieldChange('confirmationCode', e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-200">
+                      Activity notes / details
+                    </label>
+                    <textarea
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none ring-blue-500/50 focus:bg-white focus:ring dark:border-slate-600 dark:bg-slate-900"
+                      rows={3}
+                      value={segmentForm.activityNotes}
+                      onChange={(e) => handleSegmentFieldChange('activityNotes', e.target.value)}
+                      placeholder="Optional notes, booking info, or instructions for this activity"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="mt-2 flex items-center justify-between md:col-span-2">
                 <button

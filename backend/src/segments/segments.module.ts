@@ -4,9 +4,10 @@ import { SegmentsController } from './segments.controller';
 import { PrismaModule } from '../prisma.module';
 import { FlightService } from '../flights/flight.service';
 import { SettingsModule } from '../settings/settings.module';
+import { FlightsModule } from '../flights/flights.module';
 
 @Module({
-  imports: [PrismaModule, SettingsModule],
+  imports: [PrismaModule, SettingsModule, FlightsModule],
   controllers: [SegmentsController],
   providers: [SegmentsService, FlightService],
 })
