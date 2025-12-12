@@ -52,16 +52,29 @@ export class FlightService {
     const res = await fetch(url, {
       headers: {
         'X-Api-Key': apiKey,
+        Accept: 'application/json',
       },
     });
 
+    const isJson = (res.headers.get('content-type') || '').includes('application/json');
     if (!res.ok) {
       const text = await res.text();
       this.logger.warn(`AeroDataBox error ${res.status}: ${text}`);
       throw new Error(`AeroDataBox failed: ${res.status}`);
     }
 
-    const data = (await res.json()) as { flights?: AeroFlight[] };
+    let data: { flights?: AeroFlight[] } | null = null;
+    try {
+      if (!isJson) {
+        const text = await res.text();
+        this.logger.error(`AeroDataBox non-JSON response: ${text.slice(0, 200)}`);
+        throw new Error('Unexpected response from AeroDataBox');
+      }
+      data = (await res.json()) as { flights?: AeroFlight[] };
+    } catch (err) {
+      this.logger.error('Failed to parse AeroDataBox response', err as any);
+      throw new Error('Failed to parse AeroDataBox response');
+    }
     const flight = data?.flights?.[0];
     if (!flight) return null;
 
