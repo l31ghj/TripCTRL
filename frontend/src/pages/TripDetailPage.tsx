@@ -120,6 +120,13 @@ function renderTimeRange(start: string, end?: string | null) {
   return `${fmtTime(startDate)} - ${fmtTime(endDate)}`;
 }
 
+function formatUtc(utc?: string | null) {
+  if (!utc) return null;
+  const d = new Date(utc);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.toLocaleDateString()} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function getSegmentMeta(type: string) {
   switch (type) {
     case 'accommodation':
@@ -1992,6 +1999,90 @@ async function handleImageChange(e: any) {
                                           )}
                                         </div>
                                       )}
+                                    {(s.flightStatus ||
+                                      s.flightGateDeparture ||
+                                      s.flightGateArrival ||
+                                      s.flightTerminalDep ||
+                                      s.flightTerminalArr ||
+                                      s.flightDelayMinutes ||
+                                      s.flightDeparture ||
+                                      s.flightArrival) && (
+                                      <div className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-semibold">Flight details</span>
+                                          {s.flightStatus && (
+                                            <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:border-slate-700">
+                                              {s.flightStatus}
+                                            </span>
+                                          )}
+                                          {typeof s.flightDelayMinutes === 'number' && s.flightDelayMinutes > 0 && (
+                                            <span className="text-red-600 dark:text-red-300">
+                                              Delay: {s.flightDelayMinutes} min
+                                            </span>
+                                          )}
+                                          {s.flightLastFetchedAt && (
+                                            <span className="text-[10px] text-slate-400">
+                                              Updated {new Date(s.flightLastFetchedAt).toLocaleTimeString()}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="grid gap-2 md:grid-cols-2">
+                                          {s.flightDeparture && (
+                                            <div className="rounded border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900/50">
+                                              <div className="text-[10px] font-semibold uppercase text-slate-500">
+                                                Departure
+                                              </div>
+                                              <div className="text-slate-700 dark:text-slate-200">
+                                                {s.flightDeparture.airport?.iata || s.flightDeparture.airport?.name || '—'}
+                                              </div>
+                                              {formatUtc(s.flightDeparture.scheduledTimeUtc) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  Scheduled: {formatUtc(s.flightDeparture.scheduledTimeUtc)}
+                                                </div>
+                                              )}
+                                              {formatUtc(s.flightDeparture.actualTimeUtc) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  Actual: {formatUtc(s.flightDeparture.actualTimeUtc)}
+                                                </div>
+                                              )}
+                                              {(s.flightTerminalDep || s.flightGateDeparture) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  {s.flightTerminalDep ? `Terminal ${s.flightTerminalDep}` : ''}{' '}
+                                                  {s.flightGateDeparture ? `Gate ${s.flightGateDeparture}` : ''}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                          {s.flightArrival && (
+                                            <div className="rounded border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900/50">
+                                              <div className="text-[10px] font-semibold uppercase text-slate-500">
+                                                Arrival
+                                              </div>
+                                              <div className="text-slate-700 dark:text-slate-200">
+                                                {s.flightArrival.airport?.iata || s.flightArrival.airport?.name || '—'}
+                                              </div>
+                                              {formatUtc(s.flightArrival.scheduledTimeUtc) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  Scheduled: {formatUtc(s.flightArrival.scheduledTimeUtc)}
+                                                </div>
+                                              )}
+                                              {formatUtc(s.flightArrival.actualTimeUtc) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  Actual: {formatUtc(s.flightArrival.actualTimeUtc)}
+                                                </div>
+                                              )}
+                                              {(s.flightTerminalArr || s.flightGateArrival || s.flightBaggage) && (
+                                                <div className="text-[10px] text-slate-500">
+                                                  {s.flightTerminalArr ? `Terminal ${s.flightTerminalArr}` : ''}{' '}
+                                                  {s.flightGateArrival ? `Gate ${s.flightGateArrival}` : ''}{' '}
+                                                  {s.flightBaggage ? `Baggage ${s.flightBaggage}` : ''}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                     </div>
                                   </div>
                                 </div>

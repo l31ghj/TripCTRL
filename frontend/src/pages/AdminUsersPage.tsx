@@ -5,6 +5,8 @@ import {
   listUsers,
   updateUserRole,
   updateUserStatus,
+  getFlightApiKeyStatus,
+  setFlightApiKey,
 } from '../api/admin';
 
 type Role = AdminUser['role'];
@@ -33,6 +35,9 @@ export function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
+  const [apiKeyStatus, setApiKeyStatus] = useState<{ hasKey: boolean; source: string | null } | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [savingKey, setSavingKey] = useState(false);
 
   const refresh = async () => {
     try {
@@ -49,8 +54,18 @@ export function AdminUsersPage() {
     }
   };
 
+  const refreshApiKeyStatus = async () => {
+    try {
+      const status = await getFlightApiKeyStatus();
+      setApiKeyStatus(status);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     refresh();
+    refreshApiKeyStatus();
   }, []);
 
   const totals = useMemo(() => {
@@ -94,24 +109,83 @@ export function AdminUsersPage() {
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       <NavBar />
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 pb-12 pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">User management</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Approve pending accounts, adjust roles, and review access.
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              Admin: full access and approvals · Manager: share trips and edit trips · Member: own trips + shared access · View only: can only view trips shared with them
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">User management</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Approve pending accounts, adjust roles, and review access.
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Admin: full access and approvals · Manager: share trips and edit trips · Member: own trips + shared access · View only: can only view trips shared with them
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={refresh}
+              className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+            >
+              Refresh
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={refresh}
-            className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-          >
-            Refresh
-          </button>
-        </div>
+
+        <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                Flight API key (AeroDataBox)
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Required for flight enrichment and hourly day-of sync.
+              </p>
+            </div>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {apiKeyStatus?.hasKey
+                ? `Configured (${apiKeyStatus.source === 'env' ? 'env' : 'saved'})`
+                : 'Not configured'}
+            </span>
+          </div>
+          <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              type="text"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="Enter API key"
+              className="h-9 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800 outline-none ring-blue-500/50 focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setSavingKey(true);
+                    await setFlightApiKey(apiKeyInput.trim() || undefined);
+                    setApiKeyInput('');
+                    await refreshApiKeyStatus();
+                  } catch (err: any) {
+                    console.error(err);
+                    setError(err.message ?? 'Failed to save API key');
+                  } finally {
+                    setSavingKey(false);
+                  }
+                }}
+                className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                disabled={savingKey}
+              >
+                {savingKey ? 'Saving...' : 'Save key'}
+              </button>
+              <button
+                type="button"
+                onClick={refreshApiKeyStatus}
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Note: Environment variable AERODATABOX_API_KEY takes precedence if set on the server.
+          </p>
+        </section>
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-700/50 dark:bg-red-900/30 dark:text-red-200">

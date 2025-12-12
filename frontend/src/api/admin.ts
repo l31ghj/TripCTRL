@@ -25,3 +25,14 @@ export function updateUserRole(userId: string, role: 'admin' | 'manager' | 'memb
     body: JSON.stringify({ role }),
   });
 }
+
+export function getFlightApiKeyStatus() {
+  return api<{ hasKey: boolean; source: 'env' | 'db' | null }>(`/admin/flight-api-key`);
+}
+
+export function setFlightApiKey(apiKey?: string) {
+  return api<{ saved: boolean; hasKey: boolean; source?: string }>(`/admin/flight-api-key`, {
+    method: 'PUT',
+    body: JSON.stringify({ apiKey }),
+  });
+}

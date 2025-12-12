@@ -72,6 +72,21 @@ model Segment {
   flightNumber     String?
   seatNumber       String?
   passengerName    String?
+  // Flight enrichment
+  flightStatus        String?
+  flightAirline       String?
+  flightDeparture     Json?
+  flightArrival       Json?
+  flightDelayMinutes  Int?
+  flightGateDeparture String?
+  flightGateArrival   String?
+  flightTerminalDep   String?
+  flightTerminalArr   String?
+  flightBaggage       String?
+  flightLastFetchedAt DateTime?
+  flightLastStatus    String?
+  flightMeta          Json?
+  flightAutoSync      Boolean   @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -105,6 +120,11 @@ model TripShare {
 
   @@unique([tripId, userId])
   @@index([userId])
+}
+
+model Setting {
+  key   String @id
+  value String
 }
 
 enum UserRole {

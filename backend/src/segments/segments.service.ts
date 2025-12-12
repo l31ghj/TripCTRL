@@ -1,14 +1,32 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateSegmentDto } from './dto/create-segment.dto';
 import { UpdateSegmentDto } from './dto/update-segment.dto';
 import { join } from 'path';
 import * as fs from 'fs';
 import { TripPermission, UserRole } from '@prisma/client';
+import { FlightService } from '../flights/flight.service';
 
 @Injectable()
-export class SegmentsService {
-  constructor(private prisma: PrismaService) {}
+export class SegmentsService implements OnModuleInit {
+  private flightTimer: NodeJS.Timeout | null = null;
+
+  constructor(
+    private prisma: PrismaService,
+    private flights: FlightService,
+  ) {}
+
+  onModuleInit() {
+    const enabled = process.env.FLIGHT_SYNC_ENABLED !== 'false';
+    if (!enabled) return;
+    // Refresh hourly
+    this.flightTimer = setInterval(() => {
+      this.refreshTodayFlights().catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Flight sync failed', err);
+      });
+    }, 60 * 60 * 1000);
+  }
 
   private permissionRank: Record<TripPermission, number> = {
     view: 1,
@@ -76,7 +94,7 @@ export class SegmentsService {
   async createSegment(userId: string, userRole: UserRole, tripId: string, dto: CreateSegmentDto) {
     await this.assertTripPermission(tripId, userId, userRole, TripPermission.edit);
 
-    await this.prisma.segment.create({
+    const created = await this.prisma.segment.create({
       data: {
         tripId,
         type: dto.type,
@@ -94,6 +112,8 @@ export class SegmentsService {
         passengerName: dto.passengerName,
       },
     });
+
+    await this.maybeEnrichFlight(created.id, dto.transportMode, dto.flightNumber, dto.startTime);
 
     return this.getTripWithDetails(tripId);
   }
@@ -127,6 +147,10 @@ export class SegmentsService {
         passengerName: dto.passengerName,
       },
     });
+
+    const startTime = dto.startTime ? dto.startTime.toString() : segment.startTime.toISOString();
+    const flightNumber = dto.flightNumber ?? segment.flightNumber ?? undefined;
+    await this.maybeEnrichFlight(segmentId, dto.transportMode ?? segment.transportMode, flightNumber, startTime);
 
     return this.getTripWithDetails(segment.tripId);
   }
@@ -212,5 +236,83 @@ export class SegmentsService {
     ]);
 
     return { success: true };
+  }
+
+  private async maybeEnrichFlight(
+    segmentId: string,
+    transportMode?: string | null,
+    flightNumber?: string | null,
+    startTime?: string | Date | null,
+  ) {
+    if (transportMode !== 'flight') return;
+    if (!flightNumber || !startTime) return;
+    const date = new Date(startTime);
+    if (Number.isNaN(date.getTime())) return;
+    const flightDate = date.toISOString().slice(0, 10);
+    const now = new Date();
+    try {
+      const data = await this.flights.fetchByNumberAndDate(flightNumber, flightDate);
+      if (!data) {
+        await this.prisma.segment.update({
+          where: { id: segmentId },
+          data: {
+            flightLastFetchedAt: now,
+            flightLastStatus: 'not_found',
+            flightAutoSync: true,
+          },
+        });
+        return;
+      }
+
+      await this.prisma.segment.update({
+        where: { id: segmentId },
+        data: {
+          ...data,
+          flightLastFetchedAt: now,
+          flightLastStatus: 'ok',
+          flightAutoSync: true,
+        },
+      });
+    } catch (err: any) {
+      await this.prisma.segment.update({
+        where: { id: segmentId },
+        data: {
+          flightLastFetchedAt: now,
+          flightLastStatus: 'error',
+          flightAutoSync: true,
+        },
+      });
+    }
+  }
+
+  private async refreshTodayFlights() {
+    const enabled = process.env.FLIGHT_SYNC_ENABLED !== 'false';
+    if (!enabled) return;
+
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const segments = await this.prisma.segment.findMany({
+      where: {
+        transportMode: 'flight',
+        flightAutoSync: true,
+        startTime: { gte: startOfDay, lte: endOfDay },
+      },
+      select: {
+        id: true,
+        flightNumber: true,
+        startTime: true,
+        flightLastFetchedAt: true,
+      },
+    });
+
+    for (const seg of segments) {
+      const last = seg.flightLastFetchedAt ? new Date(seg.flightLastFetchedAt).getTime() : 0;
+      if (now.getTime() - last < 50 * 60 * 1000) continue; // refresh at most hourly-ish
+      await this.maybeEnrichFlight(seg.id, 'flight', seg.flightNumber, seg.startTime.toISOString());
+    }
   }
 }

@@ -44,6 +44,18 @@ export type Segment = {
   passengerName?: string | null;
   details?: SegmentDetails | string | null;
   attachments?: Attachment[] | null;
+  flightStatus?: string | null;
+  flightAirline?: string | null;
+  flightDeparture?: any;
+  flightArrival?: any;
+  flightDelayMinutes?: number | null;
+  flightGateDeparture?: string | null;
+  flightGateArrival?: string | null;
+  flightTerminalDep?: string | null;
+  flightTerminalArr?: string | null;
+  flightBaggage?: string | null;
+  flightLastFetchedAt?: string | null;
+  flightLastStatus?: string | null;
 };
 
 export type TripShare = {
