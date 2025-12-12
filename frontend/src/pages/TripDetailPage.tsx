@@ -127,6 +127,13 @@ function formatUtc(utc?: string | null) {
   return `${d.toLocaleDateString()} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
 }
 
+function formatLocalShort(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function getSegmentMeta(type: string) {
   switch (type) {
     case 'accommodation':
@@ -2010,8 +2017,8 @@ async function handleImageChange(e: any) {
                                       <div className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                                         <div className="flex flex-wrap items-center gap-2">
                                           <span className="font-semibold">Flight details</span>
-                                          {s.flightStatus && (
-                                            <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:border-slate-700">
+                                        {s.flightStatus && (
+                                          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:border-slate-700">
                                               {s.flightStatus}
                                             </span>
                                           )}
@@ -2022,7 +2029,7 @@ async function handleImageChange(e: any) {
                                           )}
                                           {s.flightLastFetchedAt && (
                                             <span className="text-[10px] text-slate-400">
-                                              Updated {new Date(s.flightLastFetchedAt).toLocaleTimeString()}
+                                              Last sync: {formatLocalShort(s.flightLastFetchedAt)}
                                             </span>
                                           )}
                                         </div>
