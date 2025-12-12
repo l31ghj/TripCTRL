@@ -253,21 +253,42 @@ export class SegmentsService implements OnModuleInit {
     try {
       const data = await this.flights.fetchByNumberAndDate(flightNumber, flightDate);
       if (!data) {
-        await this.prisma.segment.update({
-          where: { id: segmentId },
-          data: {
-            flightLastFetchedAt: now,
-            flightLastStatus: 'not_found',
-            flightAutoSync: true,
-          },
-        });
+      await this.prisma.segment.update({
+        where: { id: segmentId },
+        data: {
+          flightLastFetchedAt: now,
+          flightLastStatus: 'not_found',
+          flightStatus: undefined,
+          flightAirline: undefined,
+          flightDeparture: undefined,
+          flightArrival: undefined,
+          flightDelayMinutes: undefined,
+          flightGateDeparture: undefined,
+          flightGateArrival: undefined,
+          flightTerminalDep: undefined,
+          flightTerminalArr: undefined,
+          flightBaggage: undefined,
+          flightMeta: undefined,
+          flightAutoSync: true,
+        },
+      });
         return;
       }
 
       await this.prisma.segment.update({
         where: { id: segmentId },
         data: {
-          ...data,
+          flightStatus: data.flightStatus ?? undefined,
+          flightAirline: data.flightAirline ?? undefined,
+          flightDeparture: data.flightDeparture ?? undefined,
+          flightArrival: data.flightArrival ?? undefined,
+          flightDelayMinutes: data.flightDelayMinutes ?? undefined,
+          flightGateDeparture: data.flightGateDeparture ?? undefined,
+          flightGateArrival: data.flightGateArrival ?? undefined,
+          flightTerminalDep: data.flightTerminalDep ?? undefined,
+          flightTerminalArr: data.flightTerminalArr ?? undefined,
+          flightBaggage: data.flightBaggage ?? undefined,
+          flightMeta: data.flightMeta ?? undefined,
           flightLastFetchedAt: now,
           flightLastStatus: 'ok',
           flightAutoSync: true,
@@ -279,6 +300,17 @@ export class SegmentsService implements OnModuleInit {
         data: {
           flightLastFetchedAt: now,
           flightLastStatus: 'error',
+          flightStatus: undefined,
+          flightAirline: undefined,
+          flightDeparture: undefined,
+          flightArrival: undefined,
+          flightDelayMinutes: undefined,
+          flightGateDeparture: undefined,
+          flightGateArrival: undefined,
+          flightTerminalDep: undefined,
+          flightTerminalArr: undefined,
+          flightBaggage: undefined,
+          flightMeta: undefined,
           flightAutoSync: true,
         },
       });
