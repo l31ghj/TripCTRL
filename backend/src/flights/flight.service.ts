@@ -33,6 +33,9 @@ export class FlightService {
   // Default to API Market endpoint (MCP)
   private readonly baseUrl =
     process.env.AERODATABOX_BASE_URL || 'https://prod.api.market/api/v1/aedbx/aerodatabox';
+  // Allow path template override if the gateway path changes
+  private readonly flightPathTemplate =
+    process.env.AERODATABOX_FLIGHT_PATH || '/flights/number/{flightNumber}/{date}?withLeg=true';
 
   constructor(private settings: SettingsService) {}
 
@@ -49,7 +52,11 @@ export class FlightService {
       return null;
     }
 
-    const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}/${date}?withLeg=true`;
+    const sanitizedBase = this.baseUrl.replace(/\/+$/, '');
+    const path = this.flightPathTemplate
+      .replace('{flightNumber}', encodeURIComponent(flightNumber))
+      .replace('{date}', date);
+    const url = `${sanitizedBase}${path.startsWith('/') ? '' : '/'}${path}`;
     const res = await fetch(url, {
       headers: {
         // API Market expects x-api-market-key; keep Accept for JSON payloads
@@ -62,7 +69,7 @@ export class FlightService {
     const isJson = contentType.includes('application/json');
     if (!res.ok) {
       const text = await res.text();
-      this.logger.warn(`AeroDataBox error ${res.status}: ${text}`);
+      this.logger.warn(`AeroDataBox error ${res.status} (${url}): ${text}`);
       throw new Error(`AeroDataBox failed: ${res.status}`);
     }
 
