@@ -52,7 +52,8 @@ export class FlightService {
     const url = `${this.baseUrl}/flights/number/${encodeURIComponent(flightNumber)}/${date}?withLeg=true`;
     const res = await fetch(url, {
       headers: {
-        'X-Api-Key': apiKey,
+        // API Market expects x-api-market-key; keep Accept for JSON payloads
+        'x-api-market-key': apiKey,
         Accept: 'application/json',
       },
     });
