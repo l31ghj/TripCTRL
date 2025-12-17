@@ -30,8 +30,9 @@ type AeroFlight = {
 @Injectable()
 export class FlightService {
   private readonly logger = new Logger(FlightService.name);
-  // Default to API Market endpoint
-  private readonly baseUrl = process.env.AERODATABOX_BASE_URL || 'https://apimarket.aerodatabox.com';
+  // Default to API Market endpoint (MCP)
+  private readonly baseUrl =
+    process.env.AERODATABOX_BASE_URL || 'https://prod.api.market/api/v1/aedbx/aerodatabox';
 
   constructor(private settings: SettingsService) {}
 
@@ -56,7 +57,8 @@ export class FlightService {
       },
     });
 
-    const isJson = (res.headers.get('content-type') || '').includes('application/json');
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
     if (!res.ok) {
       const text = await res.text();
       this.logger.warn(`AeroDataBox error ${res.status}: ${text}`);
@@ -67,7 +69,9 @@ export class FlightService {
     try {
       if (!isJson) {
         const text = await res.text();
-        this.logger.error(`AeroDataBox non-JSON response: ${text.slice(0, 200)}`);
+        this.logger.error(
+          `AeroDataBox non-JSON response (status ${res.status}, content-type ${contentType}): ${text.slice(0, 200)}`,
+        );
         throw new Error('Unexpected response from AeroDataBox');
       }
       data = (await res.json()) as { flights?: AeroFlight[] };
